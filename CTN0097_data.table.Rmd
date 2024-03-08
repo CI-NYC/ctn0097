@@ -1,0 +1,680 @@
+---
+title: "CTN0097_data.table"
+author: "Anton Hung"
+date: "2024-02-06"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,echo=FALSE}
+library(dplyr)
+library(tidyr)
+library(lme4)
+library(ggplot2)
+library(data.table)
+library(lmtp)
+```
+
+# Set Working Directory
+
+```{r}
+# read the data
+setwd("/Users/anton/Library/CloudStorage/OneDrive-ColumbiaUniversityIrvingMedicalCenter/Q1_2024/CTN0097/")
+
+data<-fread("ctn0097dat.csv")
+```
+
+# Cleaning
+
+## PATID
+
+```{r}
+data$PATID <- as.character(data$PATID)
+```
+
+## VISNO
+
+```{r}
+# string extraction to convert VISNO data type
+
+data$VISNO_num <- as.numeric(gsub("\\D", "", data$VISNO))
+
+print("Before:")
+head(data$VISNO)
+
+print("After:")
+head(data$VISNO_num)
+
+data <- data %>%
+  relocate(VISNO_num, .after=VISNO)
+```
+
+# Pre-Wrangling
+
+## Filter PROTSEG = D
+
+```{r}
+data_filtered <- data[PROTSEG == "D"]
+data_filtered
+```
+
+```{r}
+print(paste("Number of patients who were given Clonidine, in total:", 
+            length(unique(data_filtered[!is.na(DMCLDD01), PATID]))))
+print("Number of patients who were given Clonidine, by visit:")
+table(data_filtered[!is.na(DMCLDD01), VISNO_num])
+```
+
+## Number of COWS scores measured, by visit:
+
+```{r}
+# 1. Filter out observations where COWS score is NA
+# 2. Group by PATID, VISNO_num, and count how many occurrences of each VISNO_num
+
+table(data[!is.na(COCOWSCR), .N, by=c("PATID", "VISNO_num")]$VISNO_num)
+
+# Visit 5 has the most non-baseline COWS scores (183)
+```
+
+## Day 5 COWS
+
+```{r}
+# determine the COWS score on visit 5
+COWS_5 <- data[VISNO_num == 5, .(COWS_Day_5 = max(COCOWSCR, na.rm=T)), by=PATID]
+COWS_5 <- COWS_5[!is.infinite(COWS_Day_5)]
+head(COWS_5)
+
+print(paste("Number of patients with a COWS score on Day 5:", nrow(COWS_5))) # matches with 183 from table above
+```
+
+183 patients have a COWS score on Day 5.
+
+# Rearranging in a table
+
+```{r}
+# filter rows where VISNO_num is the minimum VISNO_num, but grouped by PATID
+COWS_vs_1st_CLD <- data_filtered[!is.na(DMCLDD01), 
+                          .(first_CLD = min(VISNO_num)),
+                          by = "PATID"]
+
+COWS_vs_1st_CZP <- data_filtered[!is.na(DMCZPD01), 
+                          .(first_CZP = min(VISNO_num)),
+                          by = "PATID"]
+dim(COWS_vs_1st_CLD)
+dim(COWS_vs_1st_CZP)
+```
+
+```{r}
+COWS_vs_1st <- merge(COWS_vs_1st_CLD, COWS_vs_1st_CZP, by = "PATID", all = TRUE)[COWS_5, on = "PATID"]
+COWS_vs_1st
+```
+
+```{r}
+sum(!is.na(COWS_vs_1st$first_CLD))
+sum(!is.na(COWS_vs_1st$first_CZP))
+```
+
+Both clonadine and clonazepam individually have two fewer observations (173 to 171). Among the 173 patients who have a COWS score on day 5, two of them did not receive a dose of clonidine, and two did not receive a dose of clonazepam. There is overlap on one patient who did not receive a dose of either medication.
+
+```{r}
+model <- lm(COWS_Day_5 ~ first_CLD + first_CZP, data = COWS_vs_1st)
+
+summary(model)
+```
+
+```{r}
+# png("results/time_to_CZP_vs_COWS.png")
+p <- ggplot(COWS_vs_1st, aes(x=first_CLD, y=COWS_Day_5)) +
+  geom_jitter(width=0.025) +
+  ggtitle("Time to Clonazepam Administration vs. COWS Score") +
+  theme_light() 
+p
+# dev.off()
+p
+```
+
+# Summarising COWS vs Time
+
+```{r}
+COWS_vs_1st[, .(mean_cowsDay5=round(mean(COWS_Day_5),2), 
+                   median_cowsDay5=as.double(median(COWS_Day_5)),
+                   sd_cowsDay5=sd(COWS_Day_5)), keyby=first_CLD]
+
+COWS_vs_1st[, .(mean_cowsDay5=round(mean(COWS_Day_5),2), 
+                   median_cowsDay5=as.double(median(COWS_Day_5)),
+                   sd_cowsDay5=sd(COWS_Day_5)), keyby=first_CZP]
+```
+
+# Pattern of doses given
+
+## By patient
+
+### Clonadine
+
+```{r}
+CLD_pattern <- data_filtered[VISNO_num < 5 & 
+                              !is.na(DMCLDD01),
+                             .(pattern = paste(VISNO_num, collapse = ",")), 
+                             by = PATID][COWS_5, on="PATID"]
+
+(CLD_pattern)
+```
+
+There are 3 NAs for "pattern". 2 were already identified above, but there is a new NA for patient 2018009700178 because they received their first dose on the 5th visit. We are only looking at dose patterns from visits 0-4. 180 of the 183 patients have non-NA values for clonidine pattern.
+
+Code provided here:
+
+```{r}
+CLD_pattern[is.na(pattern), PATID]
+# identifies 3 potential culprits: "2018009700178" "2018009700397" "2217009700168"
+```
+
+```{r}
+COWS_vs_1st[PATID == "2018009700178"]
+```
+
+### Clonazepam
+
+```{r}
+CZP_pattern <- data_filtered[VISNO_num < 5 & 
+                               !is.na(DMCZPD01),
+                             .(pattern = paste(VISNO_num, collapse = ",")), 
+                             by = PATID][COWS_5, on="PATID"]
+
+(CZP_pattern)
+```
+
+```{r}
+CZP_pattern[is.na(pattern), PATID]
+```
+
+There are 11 NAs for clonazepam pattern. In addition to the 2 identified above, there are 9 patients who received their first dose of CZP on visit 5. 172 of the 183 patients received a dose of clonazepam before visit 5.
+
+```{r}
+COWS_vs_1st[first_CZP==5]
+```
+
+## Pattern Frequency
+
+### Clonadine
+
+```{r}
+CLD_pattern_freq <- as.data.table(table(CLD_pattern$pattern))
+CLD_pattern_freq[, medication := rep("CLD", nrow(CLD_pattern_freq))]
+
+head(CLD_pattern_freq[order(-N)])
+```
+
+### Clonazepam
+
+```{r}
+CZP_pattern_freq <- as.data.table(table(CZP_pattern$pattern))
+CZP_pattern_freq[, medication := rep("CZP", nrow(CZP_pattern_freq))]
+
+head(CZP_pattern_freq[order(-N)])
+```
+
+## Plot
+
+```{r}
+### Reshaping the pattern results for the double bar plot below
+
+both_pattern_freq <- rbind(CLD_pattern_freq, CZP_pattern_freq)
+colnames(both_pattern_freq) <- c("pattern", "freq", "medication")
+
+both_pattern_freq
+```
+
+```{r}
+# png("results/dose_pattern_frequencies.png")
+p <- ggplot(both_pattern_freq, aes(x = pattern, y = freq, fill = medication)) +
+  geom_bar(stat="identity", position = position_dodge2(preserve = "single")) + 
+  xlab("Days when doses were given") +
+  ggtitle("Frequency of dose patterns for clonidine and clonazepam") +
+  theme_light() +
+  coord_flip()
+p
+# dev.off()
+
+
+```
+
+# Joint patterns
+
+```{r}
+# Need to make a df of:
+1. PATID
+2. CLD pattern
+3. CPZ pattern
+
+# Then:
+1. group by CLD/CPZ combinations
+2. summarise by counts
+3. find most common combinations
+```
+
+## 1. DT of patterns per patient
+
+```{r}
+patterns_per_patient <- merge(CLD_pattern[,c("PATID", "pattern")], CZP_pattern[,c("PATID", "pattern")], by = "PATID", all = TRUE)
+colnames(patterns_per_patient) <- c("PATID", "CLD_pattern", "CZP_pattern")
+patterns_per_patient
+
+```
+
+## 2. Frequency of CLD/CZP dose pattern combinations
+
+```{r}
+joint_pattern_freq <- as.data.table(table(patterns_per_patient$CLD_pattern, patterns_per_patient$CZP_pattern))[order(-N)]
+colnames(joint_pattern_freq) <- c("CLD_pattern", "CZP_pattern", "freq")
+
+joint_pattern_freq
+```
+
+```{r}
+ggplot(joint_pattern_freq, aes(x = CLD_pattern, y = CZP_pattern)) +
+  geom_tile(aes(fill = freq), color="black") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+### Subsets
+
+```{r}
+patterns_per_patient[, c("num_CLD", "num_CZP") := 
+                       .((nchar(CLD_pattern) + 1) / 2, (nchar(CZP_pattern) + 1) / 2)]
+patterns_per_patient <- patterns_per_patient %>%
+  mutate_at(vars(num_CLD, num_CZP), ~ifelse(is.na(.), 0, .))
+patterns_per_patient
+```
+
+```{r}
+ggplot(patterns_per_patient, aes(x=num_CLD)) +
+  geom_histogram(binwidth=0.5)
+
+ggplot(patterns_per_patient, aes(x=num_CZP)) +
+  geom_histogram(binwidth=0.5)
+```
+
+```{r}
+print(paste("# patients received only clonadine:", 
+            patterns_per_patient[num_CLD >= 1 & num_CZP <= 0, .N]))
+print(paste("# patients received only clonazepam:", 
+            patterns_per_patient[num_CLD ==0 & num_CZP >= 1, .N]))
+```
+
+```{r}
+print(paste("total # patients:", nrow(patterns_per_patient)))
+
+print(paste("# patients received CLD >=4 days:", 
+            patterns_per_patient[num_CLD >= 4, .N]))
+print(paste("# patients received CLD <=2 days:", 
+            patterns_per_patient[num_CLD <= 2, .N]))
+print(paste("# patients received CLD <=1 days:", 
+            patterns_per_patient[num_CLD <= 1, .N]))
+
+
+print(paste("# patients received CZP >=4 days:", 
+            patterns_per_patient[num_CZP >= 4, .N]))
+print(paste("# patients received CZP <=2 days:", 
+            patterns_per_patient[num_CZP <= 2, .N]))
+print(paste("# patients received CZP <=1 days:", 
+            patterns_per_patient[num_CZP <= 1, .N]))
+
+print(paste("# patients received at least one medication >=4 days:", 
+            patterns_per_patient[num_CLD >= 4 | num_CZP >= 4, .N]))
+print(paste("# patients received at least one medication <=2 days:", 
+            patterns_per_patient[num_CLD <= 2 | num_CZP <= 2, .N]))
+print(paste("# patients received at least one medication <=1 days:", 
+            patterns_per_patient[num_CLD <= 1 | num_CZP <= 1, .N]))
+```
+
+```{r}
+dose_counts_freq <- as.data.table(table(patterns_per_patient$num_CLD, patterns_per_patient$num_CZP))[order(-N)]
+colnames(dose_counts_freq) <- c("num_CLD", "num_CZP", "freq")
+dose_counts_freq
+```
+
+```{r}
+# png("results/joint_dose_count_frequencies.png", width = 600)
+p <- ggplot(dose_counts_freq, aes(x = num_CLD, y = num_CZP)) +
+  geom_tile(aes(fill = freq)) +
+  ggtitle("Joint distribution of the number of doses of clonidine and clonazepam by patient") +
+  ylab("Number of clonazepam doses") +
+  xlab("Number of clonidine doses") +
+  geom_text(aes(label = freq), color = "white", fontface = "bold")
+p
+# dev.off()
+
+```
+
+# LMTP
+
+```{r}
+int_dir <- "/Users/anton/Library/CloudStorage/OneDrive-ColumbiaUniversityIrvingMedicalCenter/Q1_2024/CTN0097/"
+
+# saveRDS(patterns_per_patient, file.path(int_dir, intermediate/patterns_by_patient))
+
+patterns_per_patient2 <- readRDS(file.path(int_dir, "intermediate/patterns_by_patient"))
+```
+
+## Part 1
+
+Call clonidine A1 and define it as {0=0-1 doses, 1=2 doses, 2=3 doses, 3=4-5 doses} Call clonazepam A2 and define it as: {0=0-1 doses, 1=2 doses, 2=3 doses, 3=4 doses}
+
+```{r}
+# trim <- 0.995
+# folds <- 5
+# SL_folds <- 5
+# k <- 2
+lrnrs = c("SL.mean", "SL.glm", "SL.earth", "SL.glmnet", "SL.xgboost")
+```
+
+```{r}
+baseline_vars <- unique(data[, c("PATID",
+                                "DESEX",
+                                "DEHISPNC",
+                                "DEBLACK",
+                                "DEWHITE",
+                                "DEEDUCTN",
+                                "DEJOB",
+                                "DEMARTL",
+                                "age",
+                                "MHANXH",
+                                "MHBPLRH",
+                                "MHMDDH",
+                                "MHSCHZH")]) %>%
+  mutate(DEBLACK = ifelse(is.na(DEBLACK), 0, 1),
+         DEWHITE = ifelse(is.na(DEWHITE), 0, 1))
+```
+
+```{r}
+lmtp_input_partA <- copy(patterns_per_patient)
+lmtp_input_partA[, A1:=ifelse(num_CLD<=1, 0,
+                                  ifelse(num_CLD==2, 1,
+                                         ifelse(num_CLD==3, 2,
+                                                ifelse(num_CLD<=5, 3, NA))))]
+lmtp_input_partA[, A2:=ifelse(num_CZP<=1, 0,
+                                  ifelse(num_CZP==2, 1,
+                                         ifelse(num_CZP==3, 2,
+                                                ifelse(num_CZP==4, 3, NA))))]
+
+lmtp_input_partA <- lmtp_input_partA[COWS_5, by="PATID"][, c("PATID", "A1", "A2", "COWS_Day_5")]
+lmtp_input_partA <- merge(lmtp_input_partA, baseline_vars, on="PATID")
+
+lmtp_input_partA
+```
+
+E(Y\^{A1=3, A2} - Y)
+
+```{r}
+A <- c("A1", "A2")
+L0 <- c("DESEX",
+        "DEHISPNC",
+        "DEBLACK",
+        "DEWHITE",
+        "DEEDUCTN",
+        "DEJOB",
+        "DEMARTL",
+        "age",
+        "MHANXH",
+        "MHBPLRH",
+        "MHMDDH",
+        "MHSCHZH")
+
+lmtp_input_partA <- as.data.frame(lmtp_input_partA)
+shifted_A <- lmtp_input_partA |>
+  mutate(A1 = 3)
+```
+
+## Part 2
+
+Call clonidine A1 and define it as {0=0-2 doses, 1=3-5 doses} Call clonazepam A2 and define it as: {0=0-2 doses, 1=3-5 doses}
+
+```{r}
+lmtp_input_partB <- copy(patterns_per_patient)
+
+lmtp_input_partB[, A1:=ifelse(num_CLD<=2, 0, 
+                              ifelse(num_CLD<=5, 1, NA))]
+lmtp_input_partB[, A2:=ifelse(num_CZP<=2, 0, 
+                              ifelse(num_CZP<=5, 1, NA))]
+
+lmtp_input_partB <- lmtp_input_partB[COWS_5, by="PATID"][, c("PATID", "A1", "A2", "COWS_Day_5")]
+lmtp_input_partB <- merge(lmtp_input_partB, baseline_vars, on="PATID")
+
+lmtp_input_partB
+```
+
+E(Y\^{A1=1, A2=1} - Y\^{A1=0, A2=0})
+
+```{r}
+lmtp_input_partB <- as.data.frame(lmtp_input_partB)
+
+shifted_B1 <- lmtp_input_partB |> 
+  mutate(A1 = 1, A2 = 1)
+
+shifted_B2 <- lmtp_input_partB |> 
+  mutate(A1 = 0, A2 = 0)
+```
+
+## Part 3
+A1 and A2 as you have in the plot: e.g., {0,1,2,3,4,5} call d(A1, A2) = A1+1, A2+1 for those with A1\<5, A2\<5
+
+```{r}
+lmtp_input_partC <- copy(patterns_per_patient) %>%
+  rename("A1" = "num_CLD", "A2" = "num_CZP")
+
+lmtp_input_partC <- lmtp_input_partC[COWS_5, by="PATID"][, c("PATID", "A1", "A2", "COWS_Day_5")]
+lmtp_input_partC <- merge(lmtp_input_partC, baseline_vars, on="PATID")
+
+lmtp_input_partC
+```
+
+```{r}
+lmtp_input_partC <- as.data.frame(lmtp_input_partC)
+
+shifted_C_1and2 <- lmtp_input_partC |>
+  mutate(A1 = pmin(A1 + 1, 5),
+         A2 = pmin(A2 + 1, 5))
+
+shifted_C_1 <- lmtp_input_partC |>
+  mutate(A1 = pmin(A1 + 1, 5))
+
+shifted_C_2 <- lmtp_input_partC |>
+  mutate(A2 = pmin(A2 + 1, 5))
+```
+
+
+## Part 4
+modified E(Y^d(A1,A2) - Y):
+- subset to people whose max COWS score (already using max, no modifications needed here) at baseline is greater than 10
+
+### COWS at baseline > 10
+
+```{r}
+COWS_baseline <- data[VISNO_num == 0, .(COCOWSCR = max(COCOWSCR, na.rm=T)), by=PATID]
+COWS_baseline <- COWS_baseline[!is.infinite(COCOWSCR)] |>
+  filter(COCOWSCR >= 10)
+```
+
+
+```{r}
+lmtp_input_partD <- copy(patterns_per_patient) %>%
+  rename("A1" = "num_CLD", "A2" = "num_CZP")
+lmtp_input_partD <- lmtp_input_partD[COWS_5, by="PATID"][, c("PATID", "A1", "A2", "COWS_Day_5")]
+lmtp_input_partD <- merge(lmtp_input_partD, COWS_baseline)[,-"COCOWSCR"]
+
+```
+
+```{r}
+lmtp_input_partD <- as.data.frame(lmtp_input_partD)
+
+shifted_D_1and2 <- lmtp_input_partD |>
+  mutate(A1 = pmin(A1 + 1, 5),
+         A2 = pmin(A2 + 1, 5))
+
+shifted_D_1 <- lmtp_input_partD |>
+  mutate(A1 = pmin(A1 + 1, 5))
+
+shifted_D_2 <- lmtp_input_partD |>
+  mutate(A2 = pmin(A2 + 1, 5))
+```
+
+
+## Run LMTP
+```{r}
+my_lmtp_sdr <- function(df_name, shifted_name) {
+  if (shifted_name == "natural"){
+    shifted = NULL
+  } else {
+    shifted = get(shifted_name, envir = .GlobalEnv)
+  }
+
+  set.seed(72)
+  lmtp_sdr(
+    get(df_name, envir = .GlobalEnv),
+    trt = c("A1", "A2"),
+    outcome = "COWS_Day_5",
+    baseline = L0,
+    mtp = T,
+    shifted = shifted,
+    outcome_type = "continuous",
+    learners_outcome = lrnrs,
+    learners_trt = lrnrs,
+    )
+}
+```
+
+```{r}
+params <- data.frame(effect = c("E(Y^{A1=3, A2} - Y)",
+                                "E(Y^{A1=1, A2=1} - Y^{A1=0, A2=0})",
+                                "E(Y^d(A1,A2) - Y)",
+                                "E(Y^d(A1) - Y)",
+                                "E(Y^d(A2) - Y)",
+                                "E(Y^d(A1,A2) - Y)",
+                                "E(Y^d(A1) - Y)",
+                                "E(Y^d(A2) - Y)"
+                                ),
+                     
+                     data = c("lmtp_input_partA",
+                              "lmtp_input_partB",
+                              "lmtp_input_partC",
+                              "lmtp_input_partC",
+                              "lmtp_input_partC",
+                              "lmtp_input_partD",
+                              "lmtp_input_partD",
+                              "lmtp_input_partD"
+                              ),
+                     
+                     shifted1 = c("shifted_A",
+                                 "shifted_B1",
+                                 "shifted_C_1and2",
+                                 "shifted_C_1",
+                                 "shifted_C_2",
+                                 "shifted_D_1and2",
+                                 "shifted_D_1",
+                                 "shifted_D_2"
+                                 ),
+                     
+                     shifted2 = c("natural",
+                                  "shifted_B2",
+                                  "natural",
+                                  "natural",
+                                  "natural",
+                                  "natural",
+                                  "natural",
+                                  "natural"
+                                  )
+                     )
+```
+
+
+```{r}
+results <- data.frame()
+
+for (i in 1:5){
+  result_1 <- my_lmtp_sdr(params[i, "data"], params[i, "shifted1"])
+  result_2 <- my_lmtp_sdr(params[i, "data"], params[i, "shifted2"])
+  
+  estimate <- lmtp_contrast(result_1, ref=result_2)
+  
+  results <- rbind(results, c(params[i, "effect"],
+                              estimate$vals$theta,
+                              estimate$vals$shift,
+                              estimate$vals$
+                                ref,
+                              estimate$vals$std.error,
+                              estimate$vals$conf.low,
+                              estimate$vals$conf.high,
+                              estimate$vals$p.value
+                              ))
+}
+
+colnames(results) <- c("effect", "theta", "shift", "ref", "std.error", "conf.low", "conf.high", "p.value")
+```
+
+
+
+
+```{r}
+
+definitions = data.frame(A1 = c("0=0-1 doses, 1=2 doses, 2=3 doses, 3=4-5 doses",
+                                                        "0=0-2 doses, 1=3-5 doses",
+                                                        "# of doses left as is",
+                                                        "# of doses left as is",
+                                                        "# of doses left as is"),
+                        A2 = c("0=0-1 doses, 1=2 doses, 2=3 doses, 3=4 doses",
+                                                         "0=0-2 doses, 1=3-5 doses",
+                                                         "# of doses left as is",
+                                                         "# of doses left as is",
+                                                         "# of doses left as is"))
+
+results <- cbind(definitions, results)
+
+colnames(results)[1:2] <- c("A1_clonadine_definition", "A2_clonazepam_definition")
+
+results2 <- copy(results)
+results2[, -c(1:3)] <- lapply(results[,-c(1:3)], function(x) round(as.numeric(x), 3))
+
+write.csv(results2, "/Users/anton/Library/CloudStorage/OneDrive-ColumbiaUniversityIrvingMedicalCenter/Q1_2024/CTN0097/results/effect_estimates.csv")
+# results <- read.csv("/Users/anton/Library/CloudStorage/OneDrive-ColumbiaUniversityIrvingMedicalCenter/Q1_2024/CTN0097/results/effect_estimates.csv", row.names = NULL)
+
+```
+
+# Plot effect results
+
+```{r}
+# for (i in 1:5){
+#   tmp <- results[i,]
+#   tmp2 <- data.frame(x = c("intervention", "natural"),
+#                      y = c(tmp[1, "estimate (first)"], tmp[1, "estimate (second)"]),
+#                      std_err = c(tmp[1, "std. error (first)"], tmp[1, "std. error (second)"]))
+# 
+#   p <- ggplot(tmp2, aes(x = x, y = y, color = x)) +
+#     geom_point() +
+#     geom_line()
+#     
+#   p
+#   break
+# }
+# tmp1 <- results[, c("effect", "estimate (first)", "std. error (first)")]
+# colnames(tmp1) <- c("effect", "estimate", "std.error")
+# 
+# tmp2 <- results[, c("effect", "estimate (second)", "std. error (second)")]
+# colnames(tmp2) <- c("effect", "estimate", "std.error")
+# 
+# tmp <- cbind(rbind(tmp1,tmp2), c(rep("intervention", 5), rep("natural", 5)))
+# colnames(tmp)[4] <- "intervention"
+# tmp$estimate <- as.numeric(tmp$estimate)
+# tmp$std.error <- as.numeric(tmp$std.error)
+# 
+# p <- ggplot(tmp, aes(x = intervention, y = estimate, color = effect, group = effect)) +
+#   geom_jitter(position = position_dodge(width = 0.2), size = 2) +
+#   geom_line(position = position_dodge(width = 0.2), size = 0.75) +
+#   geom_errorbar(aes(ymin = estimate - 1.96*std.error, ymax = estimate + 1.96*std.error), width = 0.2, position = position_dodge(0.2)) +
+#   theme_light()
+# p
+```
+
