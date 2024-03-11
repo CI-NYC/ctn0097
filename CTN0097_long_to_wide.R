@@ -44,8 +44,9 @@ L0 <- c("PATID",
         "MHSCHZH")
 baseline_vars <- unique(data[, ..L0])
 
-# taking the max COWs score for each patient at each visit number
-COWS_SCORE <- data[VISNO_num <= 5, .(Y = last(COCOWSCR)), by=c("PATID", "VISNO_num")]
+# taking the last (non-NA, if possible) COWs score for each patient at each visit number
+COWS_SCORE <- data[VISNO_num <= 5, .(Y = ifelse(is.na(last(COCOWSCR)) == FALSE, last(COCOWSCR), 
+                                                last(na.omit(COCOWSCR)))), by=c("PATID", "VISNO_num")]
 COWS_SCORE <- COWS_SCORE[!is.infinite(Y)]
 
 # including the visits only where doses are administered
