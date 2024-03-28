@@ -54,7 +54,7 @@ data <- data[VISNO %in% c("B00","IN01","IN02","IN03","IN04","IN05")]
 
 # counting how many doses are given each visit
 num_doses <- data.frame(A1 = rowSums(!is.na(data[, c("DMCLDD01", "DMCLDD02", "DMCLDD03", "DMCLDD04", "DMCLDD05", "DMCLDD06")])),
-                        A2 = rowSums(!is.na(data[, c("DMCZPD01", "DMCZPD03", "DMCZPD03", "DMCZPD04", "DMCZPD05", "DMCZPD06")])))
+                        A2 = rowSums(!is.na(data[, c("DMCZPD01", "DMCZPD02", "DMCZPD03", "DMCZPD04", "DMCZPD05", "DMCZPD06")])))
 
 data <- cbind(data, num_doses)
 
