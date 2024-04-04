@@ -48,6 +48,9 @@ baseline_vars <- unique(data[, ..L0])
 COWS_SCORE <- data[VISNO_num <= 5, .(Y = ifelse(is.na(first(COCOWSCR)) == FALSE, first(COCOWSCR), 
                                                 first(na.omit(COCOWSCR)))), by=c("PATID", "VISNO_num")]
 
+COWS_SCORE_LAST <- data[VISNO_num == 5, .(last_Y = ifelse(is.na(last(COCOWSCR)) == FALSE, last(COCOWSCR), 
+                                                last(na.omit(COCOWSCR)))), by=c("PATID", "VISNO_num")]
+
 max_COWS_SCORE <- data[VISNO_num <= 5, .(Z = max(COCOWSCR, na.rm = TRUE)), by=c("PATID", "VISNO_num")]
 COWS_SCORE <- COWS_SCORE[!is.infinite(Y)]
 
@@ -192,7 +195,8 @@ data_wide <- data_wide |>
          A2_dose_sum.2 = ifelse(is.na(A2_dose_sum.2), 0, A2_dose_sum.2),
          A2_dose_sum.3 = ifelse(is.na(A2_dose_sum.3), 0, A2_dose_sum.3),
          A2_dose_sum.4 = ifelse(is.na(A2_dose_sum.4), 0, A2_dose_sum.4),
-         A2_dose_sum.5 = ifelse(is.na(A2_dose_sum.5), 0, A2_dose_sum.5))
+         A2_dose_sum.5 = ifelse(is.na(A2_dose_sum.5), 0, A2_dose_sum.5)) |>
+  left_join(COWS_SCORE_LAST |> select(PATID, last_Y), by = c("PATID" = "PATID"))
 
 # saving the data
 
