@@ -1,0 +1,194 @@
+library(tidyverse)
+library(lubridate)
+library(hms)
+
+# daily medication data
+
+DMA <- read.csv("data/DMA.csv", colClasses = c(PATID = "character"), na.strings = "") |>
+  filter(PROTSEG == "D" |
+           PROTSEG == "C") 
+
+# fixing issues of patients with 2 rows per day (most are due to extra vitals -- does not affect medication counts)
+
+DMA <- DMA |>
+  filter(!(PATID == "02221009700150" & VISNO == "I01A"), # extra vitals for that day
+         !(PATID == "02221009700210" & VISNO == "I03A"), # extra vitals for that day
+         !(PATID == "02221009700210" & VISNO == "I04A"), # extra vitals for that day
+         !(PATID == "02221009700210" & VISNO == "I05A"), # extra vitals for that day
+         !(PATID == "02221009700253" & VISNO == "I02A"), # extra vitals for that day
+         !(PATID == "02221009700253" & VISNO == "I03A"), # extra vitals for that day
+         !(PATID == "02221009700253" & VISNO == "I04A") # extra vitals for that day
+         )
+
+## BE CAREFUL OF PATID 02217009700004 -- has 2 entries for DMAMDDT -2 -- manually combining into 1
+
+DMA <- DMA |> 
+  mutate(DMBUPD07 = ifelse(PATID == "02217009700004" & VISNO == "IN03", 1, as.numeric(NA)),
+         DMBUPT07 = ifelse(PATID == "02217009700004" & VISNO == "IN03", "19:50:00", NA)) |>
+  mutate(DMBUPT07 = hms::as_hms(DMBUPT07)) |>
+  rowwise() |>
+  mutate(DMBUPDTL = sum(DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, na.rm = TRUE)) |>
+  relocate(DMBUPT07, .after = DMBUPT06) |>
+  filter(!(PATID == "02217009700004" & VISNO == "I03A")) # extra bup dose for that day (could be mistake?)
+
+# Enrollment + consent data
+
+enrollment <- read.csv("data/EC0097C.csv", colClasses = c(PATID = "character")) |>
+  mutate(PROTSEG = "C") |>
+  select(PATID, E97ADMDT, PROTSEG) |>
+  merge(read.csv("data/EC0097D.csv", colClasses = c(PATID = "character")) |>
+          mutate(PROTSEG = "D") |>
+          select(PATID, E97ADMDT, PROTSEG), all = TRUE) |>
+  rename("admission_date" = "E97ADMDT")
+
+consent <- read.csv("data/EC0097B.csv", colClasses = c(PATID = "character")) |>
+  filter(is.na(STARTDT) == FALSE) |>
+  select(PATID, STARTDT) |>
+  rename("consent_date" = "STARTDT")
+
+COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
+  mutate(cows_score = ifelse(is.na(COCOWSCR), COWSCRRT, COCOWSCR)) |>
+  left_join(enrollment, by = c("PATID" = "PATID")) |>
+  rename("cows_time" = "COASMTM") |>
+  filter(COWASMDT >= admission_date) |>
+  select(PATID, COWASMDT, cows_time, cows_score) |>
+  arrange(PATID, COWASMDT, cows_time) |>
+  group_by(PATID, COWASMDT) |> 
+  mutate(number = row_number()) |>
+  mutate(
+    score_col = paste0("", number)
+  ) |>
+  select(-number) |>
+  pivot_wider(names_from = c(score_col), 
+              values_from = c(cows_time, cows_score)) |>
+  rename("DMAMDDT" = "COWASMDT")
+
+full_data <- DMA |> # joining COWS data
+  full_join(COW)
+
+full_data <- full_data |>
+  select(-PROTSEG) |>
+  full_join(enrollment, by = c("PATID" = "PATID")) |>
+  full_join(consent, by = c("PATID" = "PATID"))  |>
+  relocate(admission_date, .after = PATID) |>
+  mutate(day = case_when(admission_date == DMAMDDT ~ 1,
+                         admission_date < DMAMDDT ~ DMAMDDT - admission_date + 1,
+                         TRUE ~ NA
+  )) |>
+  relocate(day, .after = admission_date) |>
+  arrange(PATID, day) |>
+  mutate(day = ifelse(is.na(day), 1, day)) # for 2 cases of missing day (only day), then use as day 1
+
+#max_dates_df <- full_data |>
+#  group_by(PATID) |>
+#  summarize(max_day = max(day))
+
+#min_dates_df <- full_data |>
+#  group_by(PATID) |>
+#  summarize(min_day = min(DMAMDDT))
+
+#full_data <- full_data |>
+#  left_join(max_dates_df, by = c("PATID" = "PATID")) |>
+#  left_join(min_dates_df, by = c("PATID" = "PATID"))
+
+EOI <- read.csv("data/EOI.csv", colClasses = c(PATID = "character")) |>
+  select(PATID, EINTXIND, EOIINJDT, EITERMDT)
+
+full_data <- full_data |>
+  left_join(EOI, by = c("PATID" = "PATID"))
+
+induction_end <- full_data |>
+  filter(EOIINJDT == DMAMDDT) |>
+  mutate(EOIINJDT = day) |>
+  select(PATID, EOIINJDT) |>
+  rename("naltrexone_injection_day" = "EOIINJDT") |>
+  full_join(full_data |>
+  filter(EITERMDT == DMAMDDT) |>
+  mutate(EITERMDT = day) |>
+  select(PATID, EITERMDT) |>
+  rename("end_induction_day" = "EITERMDT")) |>
+  mutate(end_induction_day = ifelse(is.na(end_induction_day), naltrexone_injection_day, end_induction_day)) |>
+  mutate(received_naltrexone_injection = ifelse(is.na(naltrexone_injection_day) == FALSE, 1, 0))
+
+
+full_data <- full_data |>
+  left_join(induction_end, by = c("PATID" = "PATID")) |>
+  mutate(max_day = max(day, na.rm = TRUE)) |>
+  complete(PATID, day) |>
+  group_by(PATID) |>
+  fill(c(PROTSEG, end_induction_day, received_naltrexone_injection, naltrexone_injection_day), .direction = "downup") |>
+  mutate(end_induction_day = ifelse(is.na(end_induction_day), max_day, end_induction_day)) |>
+  ungroup() |>
+  select(-max_day) |>
+  filter(day >= 1,
+         day <= end_induction_day) |>
+  select(PATID, PROTSEG, day, DMAMDDT, SITE, consent_date, received_naltrexone_injection, naltrexone_injection_day, end_induction_day, # key information
+         DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, DMBUPDTL, DMBUPT01, DMBUPT02, DMBUPT03, DMBUPT04, DMBUPT05, DMBUPT06, DMBUPT07, # BUP
+         DMCLDD01, DMCLDD02, DMCLDD03, DMCLDD04, DMCLDD05, DMCLDD06, DMCLDDTL, DMCLDT01, DMCLDT02, DMCLDT03, DMCLDT04, DMCLDT05, DMCLDT06, #CL
+         DMCZPD01, DMCZPD02, DMCZPD03, DMCZPD04, DMCZPD05, DMCZPD06, DMCZPDTL, DMCZPT01, DMCZPT02, DMCZPT03, DMCZPT04, DMCZPT05, DMCZPT06, # CZ
+         cows_score_1, cows_score_2, cows_score_3, cows_score_4, cows_score_5, cows_score_6, cows_score_7, cows_score_8, cows_score_9, cows_score_10, cows_score_11, cows_score_12, # COWS score
+         cows_time_1, cows_time_2, cows_time_3, cows_time_4, cows_time_5, cows_time_6, cows_time_7, cows_time_8, cows_time_9, cows_time_10, cows_time_11, cows_time_12 # COWS time
+         )
+
+time_columns <- c("DMBUPT01", "DMBUPT02", "DMBUPT03", "DMBUPT04", "DMBUPT05", "DMBUPT06", #DMBUPT07, #BUP
+                  "DMCLDT01", "DMCLDT02", "DMCLDT03", "DMCLDT04", "DMCLDT05", "DMCLDT06", #CL
+                  "DMCZPT01", "DMCZPT02", "DMCZPT03", "DMCZPT04", "DMCZPT05", "DMCZPT06", # CZ
+                  "cows_time_1", "cows_time_2", "cows_time_3", "cows_time_4", "cows_time_5", "cows_time_6", 
+                  "cows_time_7", "cows_time_8", "cows_time_9", "cows_time_10", "cows_time_11", "cows_time_12" # COWS time
+                  )
+
+for (col in time_columns) {
+  full_data[[col]] <- as.POSIXct(full_data[[col]], format = "%H:%M")
+}
+
+change_time <- function(df, time_columns) {
+  for (col in time_columns) {
+    df[[col]] <- as_hms(df[[col]])
+  }
+  return(df)
+}
+
+# Apply the function to extract time components
+full_data_final <- change_time(full_data, time_columns)
+
+
+# UDS
+
+UDS <- read.csv("data/UDS.csv", colClasses = c(PATID = "character"), na.strings = "") |>
+  filter(PROTSEG == "C" | PROTSEG == "D") |>
+  filter(PATID != "02207009701249") # look at note -- patient who failed induction but returned one time for medication
+
+full_data_final <- full_data_final |>
+  full_join(UDS |> select(PATID, UDSASMDT, UDTEST1, ), by = c("PATID" = "PATID",
+                        "DMAMDDT" = "UDSASMDT")) |>
+  mutate(UDTEST1 = ifelse(is.na(UDTEST1), 0, UDTEST1)) |>
+  distinct()
+
+saveRDS(full_data_final, here::here("data/ctn97_analysis_data_062624.rds"))
+
+
+
+  
+
+#  full_data |>
+#  filter(PROTSEG == "C") |> # filter to rapid induction
+#  complete(PATID, day) |>
+#  group_by(day) |> # group by VISNO day
+#  summarize(buprenorphine = sum(ifelse(DMBUPDTL > 0, 1, 0), na.rm = TRUE),  # if pat received any buprenorphine then yes
+#            buprenorphine2 = sum(ifelse(DMBUPD01 > 0 |
+#                                          DMBUPD02 > 0 |
+#                                          DMBUPD03 > 0 |
+#                                          DMBUPD04 > 0 |
+#                                          DMBUPD05 > 0 |
+#                                          DMBUPD06 > 0, 1, 0), na.rm = TRUE),
+#            clonidine = sum(ifelse(DMCLDDTL > 0, 1, 0), na.rm = TRUE), # if pat received any clonidine then yes
+#            clonazepam = sum(ifelse(DMCZPDTL > 0, 1, 0), na.rm = TRUE)) # if pat received any clonazepam then yes
+
+## Checking if DMCZPDTL is accurate
+#full_data |>
+#  rowwise() |>
+#  mutate(clonazepam_sum = sum(DMCZPD01, DMCZPD02, DMCZPD03, DMCZPD04, DMCZPD05, DMCZPD06, na.rm = TRUE),
+#         clonazepam_diff = ifelse(DMCZPDTL == clonazepam_sum, 0, 1))  |>
+#  select(PATID, day, DMCZPDTL,clonazepam_sum,  clonazepam_diff) |>
+#  filter(clonazepam_diff == 1)
+
