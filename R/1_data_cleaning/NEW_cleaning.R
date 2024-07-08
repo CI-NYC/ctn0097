@@ -47,7 +47,13 @@ consent <- read.csv("data/EC0097B.csv", colClasses = c(PATID = "character")) |>
   rename("consent_date" = "STARTDT")
 
 COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
-  mutate(cows_score = ifelse(is.na(COCOWSCR), COWSCRRT, COCOWSCR)) |>
+  mutate(across(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR,
+                  COYAWN, COANXITY, COGOOSKN), ~ coalesce(., 0))) |>
+  rowwise() |>
+  mutate(cows_score = case_when(is.na(COCOWSCR) & is.na(COWSCRRT) == FALSE ~ COWSCRRT,
+                              TRUE ~ sum(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR,
+                                                  COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- doesn't match sum -- we will take sum for now
+                              )) |>
   left_join(enrollment, by = c("PATID" = "PATID")) |>
   rename("cows_time" = "COASMTM") |>
   filter(COWASMDT >= admission_date) |>
