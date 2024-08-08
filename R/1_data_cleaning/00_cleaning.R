@@ -2,11 +2,22 @@ library(tidyverse)
 library(lubridate)
 library(hms)
 
+# enrollment data
+enrollment <- read.csv("data/EC0097C.csv", colClasses = c(PATID = "character")) |>
+  mutate(PROTSEG = "C") |>
+  select(PATID, E97ADMDT, PROTSEG) |>
+  merge(read.csv("data/EC0097D.csv", colClasses = c(PATID = "character")) |>
+          mutate(PROTSEG = "D") |>
+          select(PATID, E97ADMDT, PROTSEG), all = TRUE) |>
+  rename("admission_date" = "E97ADMDT")
+
 # daily medication data
 
 DMA <- read.csv("data/DMA.csv", colClasses = c(PATID = "character"), na.strings = "") |>
   filter(PROTSEG == "D" |
-           PROTSEG == "C") 
+           PROTSEG == "C") |>
+  select(-PROTSEG) |>
+  full_join(enrollment, by = c("PATID" = "PATID"))
 
 # fixing issues of patients with 2 rows per day (most are due to extra vitals -- does not affect medication counts)
 
@@ -29,22 +40,18 @@ DMA <- DMA |>
   rowwise() |>
   mutate(DMBUPDTL = sum(DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, na.rm = TRUE)) |>
   relocate(DMBUPT07, .after = DMBUPT06) |>
-  filter(!(PATID == "02217009700004" & VISNO == "I03A")) # extra bup dose for that day (could be mistake?)
+  filter(!(PATID == "02217009700004" & VISNO == "I03A"))|>
+  mutate(DMAMDDT = ifelse(is.na(DMAMDDT), admission_date, DMAMDDT)) |>
+  complete(PATID, DMAMDDT) |>
+  group_by(PATID) |>
+  fill(c(admission_date), .direction = "downup")
 
-# Enrollment + consent data
+# consent data
 
-enrollment <- read.csv("data/EC0097C.csv", colClasses = c(PATID = "character")) |>
-  mutate(PROTSEG = "C") |>
-  select(PATID, E97ADMDT, PROTSEG) |>
-  merge(read.csv("data/EC0097D.csv", colClasses = c(PATID = "character")) |>
-          mutate(PROTSEG = "D") |>
-          select(PATID, E97ADMDT, PROTSEG), all = TRUE) |>
-  rename("admission_date" = "E97ADMDT")
-
-consent <- read.csv("data/EC0097B.csv", colClasses = c(PATID = "character")) |>
+consent <- read.csv("data/EC0097B_0730.csv", colClasses = c(PATID = "character")) |>
   filter(is.na(STARTDT) == FALSE) |>
   select(PATID, STARTDT) |>
-  rename("consent_date" = "STARTDT")
+  rename("consent_DMAMDDT" = "STARTDT")
 
 COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
   mutate(across(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR,
@@ -67,23 +74,23 @@ COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
   select(-number) |>
   pivot_wider(names_from = c(score_col), 
               values_from = c(cows_time, cows_score)) |>
-  rename("DMAMDDT" = "COWASMDT")
+  rename("DMAMDDT" = "COWASMDT") 
 
 full_data <- DMA |> # joining COWS data
-  full_join(COW)
+  left_join(COW, by = c("PATID" = "PATID",
+                        "DMAMDDT" = "DMAMDDT"))
 
 full_data <- full_data |>
-  select(-PROTSEG) |>
-  full_join(enrollment, by = c("PATID" = "PATID")) |>
-  full_join(consent, by = c("PATID" = "PATID"))  |>
+  left_join(consent, by = c("PATID" = "PATID"))  |>
   relocate(admission_date, .after = PATID) |>
+  mutate(DMAMDDT = ifelse(is.na(DMAMDDT), admission_date, DMAMDDT)) |> # for 2 cases of missing day (only day), then use as day 1
+  filter(admission_date <= DMAMDDT) |>
   mutate(day = case_when(admission_date == DMAMDDT ~ 1,
                          admission_date < DMAMDDT ~ DMAMDDT - admission_date + 1,
                          TRUE ~ NA
   )) |>
   relocate(day, .after = admission_date) |>
-  arrange(PATID, day) |>
-  mutate(day = ifelse(is.na(day), 1, day)) # for 2 cases of missing day (only day), then use as day 1
+  arrange(PATID, day)
 
 #max_dates_df <- full_data |>
 #  group_by(PATID) |>
@@ -119,16 +126,16 @@ induction_end <- full_data |>
 
 full_data <- full_data |>
   left_join(induction_end, by = c("PATID" = "PATID")) |>
-  mutate(max_day = max(day, na.rm = TRUE)) |>
-  complete(PATID, day) |>
   group_by(PATID) |>
-  fill(c(PROTSEG, end_induction_day, received_naltrexone_injection, naltrexone_injection_day), .direction = "downup") |>
-  mutate(end_induction_day = ifelse(is.na(end_induction_day), max_day, end_induction_day)) |>
+  mutate(max_day = max(day, na.rm = TRUE)) |>
+  ungroup() |>
+  #complete(PATID, day) |>
+  group_by(PATID) |>
+  fill(c(PROTSEG, consent_DMAMDDT, SITE, end_induction_day, received_naltrexone_injection, naltrexone_injection_day), .direction = "downup") |>
   ungroup() |>
   select(-max_day) |>
-  filter(day >= 1,
-         day <= end_induction_day) |>
-  select(PATID, PROTSEG, day, DMAMDDT, SITE, consent_date, received_naltrexone_injection, naltrexone_injection_day, end_induction_day, # key information
+  filter(day >= 1) |>
+  select(PATID, PROTSEG, day, DMAMDDT, SITE, consent_DMAMDDT, received_naltrexone_injection, naltrexone_injection_day, end_induction_day, # key information
          DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, DMBUPDTL, DMBUPT01, DMBUPT02, DMBUPT03, DMBUPT04, DMBUPT05, DMBUPT06, DMBUPT07, # BUP
          DMCLDD01, DMCLDD02, DMCLDD03, DMCLDD04, DMCLDD05, DMCLDD06, DMCLDDTL, DMCLDT01, DMCLDT02, DMCLDT03, DMCLDT04, DMCLDT05, DMCLDT06, #CL
          DMCZPD01, DMCZPD02, DMCZPD03, DMCZPD04, DMCZPD05, DMCZPD06, DMCZPDTL, DMCZPT01, DMCZPT02, DMCZPT03, DMCZPT04, DMCZPT05, DMCZPT06, # CZ
@@ -155,7 +162,7 @@ change_time <- function(df, time_columns) {
 }
 
 # Apply the function to extract time components
-full_data_final <- change_time(full_data, time_columns)
+full_data <- change_time(full_data, time_columns)
 
 
 # UDS
@@ -164,16 +171,16 @@ UDS <- read.csv("data/UDS.csv", colClasses = c(PATID = "character"), na.strings 
   filter(PROTSEG == "C" | PROTSEG == "D") |>
   filter(PATID != "02207009701249") # look at note -- patient who failed induction but returned one time for medication
 
-full_data_final <- full_data_final |>
+full_data <- full_data |>
   full_join(UDS |> select(PATID, UDSASMDT, UDTEST1, ), by = c("PATID" = "PATID",
                         "DMAMDDT" = "UDSASMDT")) |>
   mutate(UDTEST1 = ifelse(is.na(UDTEST1), 0, UDTEST1)) |>
   distinct()
 
-saveRDS(full_data_final, here::here("data/ctn97_analysis_data_062624.rds"))
+full_data_final <- full_data |>
+  filter(day <= end_induction_day)
 
-
-
+saveRDS(full_data_final, here::here("data/analysis_data/ctn97_analysis_data_080624.rds"))
   
 
 #  full_data |>
