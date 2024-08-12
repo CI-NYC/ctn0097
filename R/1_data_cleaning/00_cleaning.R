@@ -139,6 +139,8 @@ full_data <- full_data |>
          DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, DMBUPDTL, DMBUPT01, DMBUPT02, DMBUPT03, DMBUPT04, DMBUPT05, DMBUPT06, DMBUPT07, # BUP
          DMCLDD01, DMCLDD02, DMCLDD03, DMCLDD04, DMCLDD05, DMCLDD06, DMCLDDTL, DMCLDT01, DMCLDT02, DMCLDT03, DMCLDT04, DMCLDT05, DMCLDT06, #CL
          DMCZPD01, DMCZPD02, DMCZPD03, DMCZPD04, DMCZPD05, DMCZPD06, DMCZPDTL, DMCZPT01, DMCZPT02, DMCZPT03, DMCZPT04, DMCZPT05, DMCZPT06, # CZ
+         DMBZODTL, # other benzos
+         DMDROWSY, DMDIZZY, # side effects
          cows_score_1, cows_score_2, cows_score_3, cows_score_4, cows_score_5, cows_score_6, cows_score_7, cows_score_8, cows_score_9, cows_score_10, cows_score_11, cows_score_12, # COWS score
          cows_time_1, cows_time_2, cows_time_3, cows_time_4, cows_time_5, cows_time_6, cows_time_7, cows_time_8, cows_time_9, cows_time_10, cows_time_11, cows_time_12 # COWS time
          )
