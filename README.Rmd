@@ -1,0 +1,36 @@
+---
+title: "README"
+output: github_document
+date: "2024-08-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+### Post-Consent Medication Table COWS &ge; 8
+```{r, echo = FALSE}
+read.csv(here::here("results/ctn97_medication_tbl_8.csv")) |>
+  select(-X, -clonidine_only, -clonazepam_only) 
+```
+
+### Post-Consent Medication Table COWS &ge; 5
+```{r, echo = FALSE}
+read.csv(here::here("results/ctn97_medication_tbl_5.csv")) |>
+  select(-X, -clonidine_only, -clonazepam_only) 
+```
+
+### Post-Consent Medication Table COWS > 3
+```{r, echo = FALSE}
+read.csv(here::here("results/ctn97_medication_tbl_3.csv")) |>
+  select(-X, -clonidine_only, -clonazepam_only) 
+```
+
+### Boxplots of Maximum COWS
+![Medication Box Plot](mediation_box_plot.png)
+
+Note:
+- Day 1 is day of signed consent
+- Missing COWS are not included in sample size counts
+
