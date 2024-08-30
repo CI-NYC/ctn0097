@@ -2,10 +2,10 @@ README
 ================
 2024-08-30
 
-Treatments (A1 and A2 occurring after max COWS but before next COWS, A3 occurring on day X):
-* A1: Clonidine ≥ -.1 mg
+Treatments (A1 and A2 occurring after max COWS but before next COWS on day X, A3 occurring on day X):
+* A1: Clonidine ≥ 0.1 mg
 * A2: clonazepam ≥ 1 mg
-* A3: any other benzodiazepine
+* A3: presence of any other benzodiazepine
 
 
 ### Post-Consent Medication Table COWS ≥ 8
