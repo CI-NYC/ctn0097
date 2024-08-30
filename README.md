@@ -2,7 +2,7 @@ README
 ================
 2024-08-30
 
-Treatments (occurring after max COWS but before next COWS):
+Treatments (A1 and A2 occurring after max COWS but before next COWS, A3 occurring on day X):
 * A1: Clonidine ≥ -.1 mg
 * A2: clonazepam ≥ 1 mg
 * A3: any other benzodiazepine
@@ -153,7 +153,7 @@ Treatments (occurring after max COWS but before next COWS):
 
 <figure>
 <img src="figs/medication_boxplot.png" alt="Medication Box Plot" />
-<figcaption aria-hidden="true">Medication Box Plot</figcaption>
+<figcaption aria-hidden="true"></figcaption>
 </figure>
 
 Notes:
