@@ -4,7 +4,7 @@ README
 
 ### Post-Consent Medication Table COWS ≥ 8
 
-| day_post_consent | max_cows….8 | count | at_least_one_of_clonidine_clonazepam_benzo | both_clonidine_and_clonazepam_and_other_benzo | both_clonidine_and_clonazepam_no_benzo |
+| Day | Max COWS >= 8 | count | At least one of A1, A2, A3 | A1, A2, and A3 | A1 and A2 + no A3 |
 |-----------------:|:------------|------:|-------------------------------------------:|----------------------------------------------:|---------------------------------------:|
 |                1 | FALSE       |   186 |                                        134 |                                            11 |                                     35 |
 |                1 | TRUE        |   164 |                                        121 |                                             9 |                                     45 |
@@ -51,7 +51,7 @@ README
 
 ### Post-Consent Medication Table COWS ≥ 5
 
-| day_post_consent | max_cows….5 | count | at_least_one_of_clonidine_clonazepam_benzo | both_clonidine_and_clonazepam_and_other_benzo | both_clonidine_and_clonazepam_no_benzo |
+| Day | Max COWS >= 5 | count | At least one of A1, A2, A3 | A1, A2, and A3 | A1 and A2 + no A3 |
 |-----------------:|:------------|------:|-------------------------------------------:|----------------------------------------------:|---------------------------------------:|
 |                1 | FALSE       |    99 |                                         65 |                                             6 |                                     13 |
 |                1 | TRUE        |   251 |                                        190 |                                            14 |                                     67 |
@@ -98,7 +98,7 @@ README
 
 ### Post-Consent Medication Table COWS \> 3
 
-| day_post_consent | max_cows…3 | count | at_least_one_of_clonidine_clonazepam_benzo | both_clonidine_and_clonazepam_and_other_benzo | both_clonidine_and_clonazepam_no_benzo |
+| Day | Max COWS > 3 | count | At least one of A1, A2, A3 | A1, A2, and A3 | A1 and A2 + no A3 |
 |-----------------:|:-----------|------:|-------------------------------------------:|----------------------------------------------:|---------------------------------------:|
 |                1 | FALSE      |    65 |                                         40 |                                             2 |                                      8 |
 |                1 | TRUE       |   285 |                                        215 |                                            18 |                                     72 |
@@ -150,8 +150,9 @@ README
 <figcaption aria-hidden="true">Medication Box Plot</figcaption>
 </figure>
 
-Notes: - Hydrocodone: `mediator_opioid_hydrocodone_rx` - Oxycodone:
-`mediator_opioid_oxycodone_rx` \* Day 1 is day of signed consent \* Only
-looking at treatments occurring after maximum COWS but prior to the next
-COWS \* Clonidine ≥ 0.1 mg, clonazepam ≥ 1 mg \* Missing COWS are not
-included in sample size counts
+Notes:
+* Day 1 is day of signed consent
+* Only looking at treatments occurring after maximum COWS but before the next
+COWS
+*Clonidine ≥ 0.1 mg, clonazepam ≥ 1 mg
+*Missing COWS are not included in sample size counts
