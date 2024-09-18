@@ -9,6 +9,9 @@ dat <- readRDS(here::here("data/analysis_data/ctn97_analysis_data_080624.rds")) 
   group_by(PATID) |>
   mutate(day_post_consent = row_number()) |> # creating new "day" variable
   ungroup() |>
+  mutate(day_diff = day - day_post_consent,
+         end_induction_day = end_induction_day - day_diff,
+         naltrexone_injection_day = naltrexone_injection_day - day_diff) |>
   mutate(cows_score_1 = ifelse(is.na(cows_score_1) == FALSE & is.na(cows_time_1), as.numeric(NA), cows_score_1), # cases where cows score is present but time is missing -- these considered missing
          cows_score_2 = ifelse(is.na(cows_score_2) == FALSE & is.na(cows_time_2), as.numeric(NA), cows_score_2),
          cows_score_3 = ifelse(is.na(cows_score_3) == FALSE & is.na(cows_time_3), as.numeric(NA), cows_score_3),
@@ -121,7 +124,7 @@ inelig_cows_clonazepam <- all_long |>
   ) |>
   rename(day_post_consent = day_post_consent.x, cows_time = time.x, total_clonazepam_dose_preceding_24h = total_dose, cows_index = time_var.x) |>
   filter(total_clonazepam_dose_preceding_24h >= 4) |>
-  mutate(value = 1)
+  mutate(clonazepam_inelig = 1)
 
 # looking at sum of clonidine dosing in the 24 hours preceding each cows score
 
@@ -140,31 +143,36 @@ inelig_cows_clonidine <- all_long |>
     total_dose = sum(dose.y, na.rm = TRUE),
     .groups = 'drop'
   ) |>
-  rename(day_post_consent = day_post_consent.x, cows_time = time.x, total_clonazepam_dose_preceding_24h = total_dose, cows_index = time_var.x) |>
-  filter(total_clonazepam_dose_preceding_24h >= 1.2) |>
-  mutate(value = 1)
+  rename(day_post_consent = day_post_consent.x, cows_time = time.x, total_clonidine_dose_preceding_24h = total_dose, cows_index = time_var.x) |>
+  filter(total_clonidine_dose_preceding_24h >= 1.2) |>
+  mutate(clonidine_inelig = 1)
 
 # combining cows times ineligible due to clonazepam and clonidine
-all_ineligible <- inelig_cows_clonazepam |> select(PATID, day_post_consent, cows_index, value) |>
-  merge(inelig_cows_clonidine |> select(PATID, day_post_consent, cows_index, value), all = TRUE) |>
+all_ineligible <- inelig_cows_clonazepam |> select(PATID, day_post_consent, cows_index, clonazepam_inelig) |>
+  merge(inelig_cows_clonidine |> select(PATID, day_post_consent, cows_index, clonidine_inelig), all = TRUE) |>
   distinct() |>
-  pivot_wider(names_from = cows_index, values_from = value, values_fill = 0) |>
-  rename_with(~ str_replace(., "^cows_time_", "ineligible_cows_time_"), starts_with("cows_time_")) |>
-  select(PATID, day_post_consent, starts_with("ineligible"))
+  mutate(across(c(clonazepam_inelig, clonidine_inelig), ~ ifelse(is.na(.), 0, .))) |>
+  mutate(cows_index = sub("^cows_time_", "", cows_index)) |>
+  rename("time_index" = "cows_index") |>
+  mutate(either_inelig = ifelse(clonazepam_inelig == 1 | clonidine_inelig == 1, 1, 0),
+         both_inelig = ifelse(clonazepam_inelig == 1 & clonidine_inelig == 1, 1, 0)) 
 
 # pivoting data longer to make calculation of max COWS easier
 
 dat_longer <- dat |>
-   select(PATID, day_post_consent, starts_with("cows")) |>
+   select(PATID, day_post_consent, naltrexone_injection_day, naltrexone_injection_time, starts_with("cows")) |>
    pivot_longer(
      cols = starts_with("cows"),
      names_to = c(".value", "time_index"),
      names_pattern = "(.*)_(.*)"
    ) 
 
-# calculating maximum cows for each patient-day
+# calculating maximum cows for each patient-day (prior to injection)
 
 max_cows_values_long <- dat_longer |>
+  mutate(after_injection = case_when(day_post_consent == naltrexone_injection_day & naltrexone_injection_time < cows_time ~ 1,
+                                     TRUE ~ 0)) |>
+  mutate(cows_score = ifelse(after_injection == 1, as.numeric(NA), cows_score)) |> # only looking at scores before injection
    group_by(PATID, day_post_consent) |>
    summarize(max_cows = max(cows_score, na.rm = TRUE)) |>
    mutate(max_cows = ifelse(max_cows == -Inf, as.numeric(NA), max_cows))
@@ -179,22 +187,13 @@ all_max_cows_long <- dat_longer |>
 
 max_cows_long_with_eligibility <- all_max_cows_long |>
   left_join(all_ineligible) |>
-  mutate(across(starts_with("ineligible"), ~ replace_na(., 0))) |>
-  mutate(max_cows_ineligible = case_when(time_index == "1" & ineligible_cows_time_1 == 1 ~ 1,
-                                               time_index == "2" & ineligible_cows_time_2 == 1 ~ 1,
-                                               time_index == "3" & ineligible_cows_time_3 == 1 ~ 1,
-                                               time_index == "4" & ineligible_cows_time_4 == 1 ~ 1,
-                                               time_index == "5" & ineligible_cows_time_5 == 1 ~ 1,
-                                               time_index == "6" & ineligible_cows_time_6 == 1 ~ 1,
-                                               time_index == "7" & ineligible_cows_time_7 == 1 ~ 1,
-                                               TRUE ~ 0)) |>
-  relocate(max_cows_ineligible, .after = max_cows) |>
+  mutate(across(ends_with("_inelig"), ~ replace_na(., 0))) |>
   group_by(PATID, day_post_consent) |>
-  arrange(PATID, day_post_consent, max_cows_ineligible, time_index) |>
-  filter(max_cows_ineligible == 0 | !any(max_cows_ineligible == 0)) |> #taking the first maximum eligible COWS (if available) or the first non-eligible COWS (if no eligible are available)
+  arrange(PATID, day_post_consent, either_inelig, time_index) |>
+  filter(either_inelig == 0 | !any(either_inelig == 0)) |> #taking the first maximum eligible COWS (if available) or the first non-eligible COWS (if no eligible are available)
   slice(1) |>
   ungroup() |>
-  select(PATID, day_post_consent, max_cows, cows_time, time_index, max_cows_ineligible) |>
+  select(PATID, day_post_consent, max_cows, cows_time, time_index, either_inelig, both_inelig, clonazepam_inelig, clonidine_inelig) |>
   rename("max_cows_time" = "cows_time")
 
 
@@ -269,22 +268,25 @@ dat_with_dosing <- dat |>
 
 saveRDS(dat_with_dosing, here::here("data/analysis_data/max_cows_data.rds"))
 
+dat_with_dosing <- readRDS(here::here("data/analysis_data/max_cows_data.rds"))
+
+
 dat_with_dosing |>
-  group_by(day_post_consent, max_cows >= 5) |>
+  group_by(day_post_consent, max_cows > 8) |>
   summarize(count = n(),
             both_clonidine_and_clonazepam = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
-                                                         post_cows_clonazepam_dose >= 1, 1, 0), na.rm = TRUE),
+                                                         post_cows_clonazepam_dose >= 1 & max_cows_ineligible == 0, 1, 0), na.rm = TRUE),
             clonidine_only = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
-                                          post_cows_clonazepam_dose < 1, 1, 0), na.rm = TRUE),
+                                          post_cows_clonazepam_dose < 1 & max_cows_ineligible == 0, 1, 0), na.rm = TRUE),
             clonazepam_only = sum(ifelse(post_cows_clonidine_dose < 0.1 & 
-                                           post_cows_clonazepam_dose >= 1, 1, 0), na.rm = TRUE)
+                                           post_cows_clonazepam_dose >= 1 & max_cows_ineligible == 0, 1, 0), na.rm = TRUE)
   ) |>
   view()
 
 
 dat_with_dosing |>
   filter(max_cows_ineligible == 1) |>
-  group_by(day_post_consent, max_cows >= 5) |>
+  group_by(day_post_consent, max_cows >= 8) |>
   summarize(count = n(),
             both_clonidine_and_clonazepam = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
                                                          post_cows_clonazepam_dose >= 1, 1, 0), na.rm = TRUE),
@@ -297,7 +299,7 @@ dat_with_dosing |>
 
 dat_with_dosing |>
   filter(max_cows_ineligible == 0) |>
-  group_by(day_post_consent, max_cows >= 5) |>
+  group_by(day_post_consent, max_cows >= 8) |>
   summarize(count = n(),
             both_clonidine_and_clonazepam = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
                                                          post_cows_clonazepam_dose >= 1, 1, 0), na.rm = TRUE),

@@ -105,7 +105,7 @@ full_data <- full_data |>
 #  left_join(min_dates_df, by = c("PATID" = "PATID"))
 
 EOI <- read.csv("data/EOI.csv", colClasses = c(PATID = "character")) |>
-  select(PATID, EINTXIND, EOIINJDT, EITERMDT)
+  select(PATID, EINTXIND, EOIINJDT, EOIINJTM, EITERMDT)
 
 full_data <- full_data |>
   left_join(EOI, by = c("PATID" = "PATID"))
@@ -113,8 +113,10 @@ full_data <- full_data |>
 induction_end <- full_data |>
   filter(EOIINJDT == DMAMDDT) |>
   mutate(EOIINJDT = day) |>
-  select(PATID, EOIINJDT) |>
+  select(PATID, EOIINJDT, EOIINJTM) |>
   rename("naltrexone_injection_day" = "EOIINJDT") |>
+  rename("naltrexone_injection_time" = "EOIINJTM") |>
+  mutate(naltrexone_injection_time = as_hms(paste0(naltrexone_injection_time, ":00"))) |>
   full_join(full_data |>
   filter(EITERMDT == DMAMDDT) |>
   mutate(EITERMDT = day) |>
@@ -131,11 +133,11 @@ full_data <- full_data |>
   ungroup() |>
   #complete(PATID, day) |>
   group_by(PATID) |>
-  fill(c(PROTSEG, consent_DMAMDDT, SITE, end_induction_day, received_naltrexone_injection, naltrexone_injection_day), .direction = "downup") |>
+  fill(c(PROTSEG, consent_DMAMDDT, SITE, end_induction_day, received_naltrexone_injection, naltrexone_injection_day, naltrexone_injection_time), .direction = "downup") |>
   ungroup() |>
   select(-max_day) |>
   filter(day >= 1) |>
-  select(PATID, PROTSEG, day, DMAMDDT, SITE, consent_DMAMDDT, received_naltrexone_injection, naltrexone_injection_day, end_induction_day, # key information
+  select(PATID, PROTSEG, day, DMAMDDT, SITE, consent_DMAMDDT, received_naltrexone_injection, naltrexone_injection_day, naltrexone_injection_time, end_induction_day, # key information
          DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, DMBUPDTL, DMBUPT01, DMBUPT02, DMBUPT03, DMBUPT04, DMBUPT05, DMBUPT06, DMBUPT07, # BUP
          DMCLDD01, DMCLDD02, DMCLDD03, DMCLDD04, DMCLDD05, DMCLDD06, DMCLDDTL, DMCLDT01, DMCLDT02, DMCLDT03, DMCLDT04, DMCLDT05, DMCLDT06, #CL
          DMCZPD01, DMCZPD02, DMCZPD03, DMCZPD04, DMCZPD05, DMCZPD06, DMCZPDTL, DMCZPT01, DMCZPT02, DMCZPT03, DMCZPT04, DMCZPT05, DMCZPT06, # CZ
