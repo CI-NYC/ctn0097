@@ -183,6 +183,7 @@ all_max_cows_long <- dat_longer |>
   left_join(max_cows_values_long) |>
   filter(cows_score == max_cows) |>
   mutate(cows_after_injection = ifelse(day_post_consent == naltrexone_injection_day & naltrexone_injection_time < cows_time, 1, 0)) |> # adding indicator for cows occurring after initiation
+  mutate(cows_after_injection = ifelse(is.na(cows_after_injection), 0, cows_after_injection)) |> # never initiated 
   filter(cows_after_injection == 0) |>
   select(-cows_after_injection)
 
