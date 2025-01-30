@@ -14,8 +14,8 @@ enrollment <- read.csv("data/EC0097C.csv", colClasses = c(PATID = "character")) 
 # daily medication data
 
 DMA <- read.csv("data/DMA.csv", colClasses = c(PATID = "character"), na.strings = "") |>
-  filter(PROTSEG == "D" |
-           PROTSEG == "C") |>
+  # only keep the standard and rapid arms of the pre-initiation study (not the post-initiation)
+  filter(PROTSEG == "D" | PROTSEG == "C") |>
   select(-PROTSEG) |>
   full_join(enrollment, by = c("PATID" = "PATID"))
 
@@ -54,12 +54,17 @@ consent <- read.csv("data/EC0097B_0730.csv", colClasses = c(PATID = "character")
   rename("consent_DMAMDDT" = "STARTDT")
 
 COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
+  filter(PROT == "0097") |>
   mutate(across(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR,
-                  COYAWN, COANXITY, COGOOSKN), ~ coalesce(., 0))) |>
+                  COYAWN, COANXITY, COGOOSKN), ~ coalesce(., 0))) |> # impute missing values with 0
   rowwise() |>
-  mutate(cows_score = case_when(is.na(COCOWSCR) & is.na(COWSCRRT) == FALSE ~ COWSCRRT,
-                              TRUE ~ sum(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR,
-                                                  COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- doesn't match sum -- we will take sum for now
+  mutate(cows_score = case_when(is.na(COCOWSCR) & is.na(COWSCRRT) == FALSE ~ COWSCRRT, # if missing COWS but retrospective available, use that
+                                # patient notes inidicating that these patients did not receive/finish COWS assessments at the visits
+                              PATID == "02201009700118" & VISNO == "IN02" ~ as.numeric(NA),
+                              PATID == "02076009700045" & VISNO == "IN08" ~ as.numeric(NA),
+                              PATID == "02076009700335" & VISNO == "B00" ~ as.numeric(NA),
+                              TRUE ~ sum(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR, # some categories missing information but still taking sum (these were imputed with 0)
+                                                  COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- sometimes doesn't match sum -- we will take sum for now
                               )) |>
   left_join(enrollment, by = c("PATID" = "PATID")) |>
   rename("cows_time" = "COASMTM") |>
@@ -104,6 +109,7 @@ full_data <- full_data |>
 #  left_join(max_dates_df, by = c("PATID" = "PATID")) |>
 #  left_join(min_dates_df, by = c("PATID" = "PATID"))
 
+# end of induction data
 EOI <- read.csv("data/EOI.csv", colClasses = c(PATID = "character")) |>
   select(PATID, EINTXIND, EOIINJDT, EOIINJTM, EITERMDT)
 
@@ -169,7 +175,7 @@ change_time <- function(df, time_columns) {
 full_data <- change_time(full_data, time_columns)
 
 
-# UDS
+# urinary drug screening
 
 UDS <- read.csv("data/UDS.csv", colClasses = c(PATID = "character"), na.strings = "") |>
   filter(PROTSEG == "C" | PROTSEG == "D") |>
@@ -184,7 +190,7 @@ full_data <- full_data |>
 full_data_final <- full_data |>
   filter(day <= end_induction_day)
 
-saveRDS(full_data_final, here::here("data/analysis_data/ctn97_analysis_data_080624.rds"))
+saveRDS(full_data_final, here::here("data/analysis_data/ctn97_analysis_data_012825.rds"))
   
 
 #  full_data |>
