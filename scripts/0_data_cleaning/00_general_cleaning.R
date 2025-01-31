@@ -143,7 +143,7 @@ full_data <- full_data |>
   ungroup() |>
   select(-max_day) |>
   filter(day >= 1) |>
-  select(PATID, PROTSEG, day, DMAMDDT, SITE, consent_DMAMDDT, received_naltrexone_injection, naltrexone_injection_day, naltrexone_injection_time, end_induction_day, # key information
+  select(PATID, PROTSEG, admission_date, day, DMAMDDT, SITE, consent_DMAMDDT, received_naltrexone_injection, naltrexone_injection_day, naltrexone_injection_time, end_induction_day, # key information
          DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, DMBUPDTL, DMBUPT01, DMBUPT02, DMBUPT03, DMBUPT04, DMBUPT05, DMBUPT06, DMBUPT07, # BUP
          DMCLDD01, DMCLDD02, DMCLDD03, DMCLDD04, DMCLDD05, DMCLDD06, DMCLDDTL, DMCLDT01, DMCLDT02, DMCLDT03, DMCLDT04, DMCLDT05, DMCLDT06, #CL
          DMCZPD01, DMCZPD02, DMCZPD03, DMCZPD04, DMCZPD05, DMCZPD06, DMCZPDTL, DMCZPT01, DMCZPT02, DMCZPT03, DMCZPT04, DMCZPT05, DMCZPT06, # CZ

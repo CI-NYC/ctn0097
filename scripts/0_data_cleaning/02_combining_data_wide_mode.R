@@ -17,18 +17,18 @@ dat_long <- readRDS(here::here("data/analysis_data/max_cows_data.rds")) |>
                         is.na(max_cows) & DMCZPDTL >= 1 ~ 1, #& DMCZPDTL >= 1 ~ 1, # if cows missing then do all medications over the day
                         is.na(max_cows) == FALSE & post_cows_clonazepam_dose >= 1 ~ 1, # if cows not missing, then look at post-cows dose
                         TRUE ~ 0), # otherwise, did not receive medication
-         A3 = case_when(DMBZODTL > 0 ~ 1,
+         L3 = case_when(DMBZODTL > 0 ~ 1,
                         TRUE ~ 0),
          L1 = ifelse(DMBUPDTL > 0, 1, 0),
          L2 = ifelse(DMDROWSY == 3 | DMDIZZY == 3, 1, 0)) |>
   filter(day_post_consent <= 14) |>
   mutate_at(vars(starts_with("L")), ~ if_else(is.na(.), 0, .)) |>
   rename("max_cows_ineligible" = "both_inelig") |>
-  mutate(naltrexone_injection_day_shift = case_when(naltrexone_injection_day == day_post_consent & is.na(max_cows_time) & pre_injection_clonidine == 0 & pre_injection_clonazepam == 0 & is.na(A3) ~ 1, # if no cows on day x, then injection counted as previous day
+  mutate(naltrexone_injection_day_shift = case_when(naltrexone_injection_day == day_post_consent & is.na(max_cows_time) & pre_injection_clonidine == 0 & pre_injection_clonazepam == 0 ~ 1, # if no cows on day x, then injection counted as previous day
                                                     TRUE ~ 0),
-         adj = ifelse(rowSums(cbind(A1, A2, A3), na.rm = TRUE) >= 1, 1, 0)) |>
+         adj = ifelse(rowSums(cbind(A1, A2), na.rm = TRUE) >= 1, 1, 0)) |>
   select(PATID, PROTSEG, naltrexone_injection_day, naltrexone_injection_time, end_induction_day, 
-         received_naltrexone_injection, day_post_consent, max_cows, max_cows_time, max_cows_ineligible, ends_with("inelig"), A1, A2, A3, adj, L1, L2, naltrexone_injection_day_shift) |>
+         received_naltrexone_injection, days_from_admission_to_consent, day_post_consent, max_cows, max_cows_time, max_cows_ineligible, ends_with("inelig"), A1, A2, L3, adj, L1, L2, naltrexone_injection_day_shift) |>
   group_by(PATID) |>
   mutate(naltrexone_injection_day = ifelse(any(naltrexone_injection_day_shift) == 1, naltrexone_injection_day - 1, naltrexone_injection_day),
          end_induction_day = ifelse(any(naltrexone_injection_day_shift) == 1, end_induction_day - 1, end_induction_day)) |>
@@ -41,7 +41,7 @@ dat_long <- readRDS(here::here("data/analysis_data/max_cows_data.rds")) |>
 saveRDS(dat_long, "data/analysis_data/dat_long.rds")
 
 dat <- dat_long |>
-  pivot_wider(names_from = day_post_consent, values_from = c(max_cows, max_cows_time, max_cows_missing_indicator, max_cows_ineligible, ends_with("inelig"), A1, A2, A3, L1, L2, adj)) |>
+  pivot_wider(names_from = day_post_consent, values_from = c(max_cows, max_cows_time, max_cows_missing_indicator, max_cows_ineligible, ends_with("inelig"), A1, A2, L3, L1, L2, adj)) |>
   mutate(PROTSEG = ifelse(PROTSEG == "C", 0, 1))
 
 # making outcome variables
@@ -144,6 +144,7 @@ dat <- dat |>
                           end_induction_day == 14 & received_naltrexone_injection == 0 ~ 0, 
                           TRUE ~ 1))  |>
   select(PATID, PROTSEG, received_naltrexone_injection,
+         days_from_admission_to_consent,
          starts_with("max_cows_"),
          starts_with("adj_"),
          starts_with("L"),
@@ -291,7 +292,7 @@ select(-age_first_opioid_use,
        -starts_with("max_cows_time"))
 
 dat_demographics <- dat |>
-  select(PATID, PROTSEG, received_naltrexone_injection, age:last_col())
+  select(PATID, PROTSEG, received_naltrexone_injection, days_from_admission_to_consent, age:last_col())
 
 dat_time_vary <- dat |>
   select(PATID, PROTSEG, received_naltrexone_injection, max_cows_1:Y_14)
@@ -343,18 +344,22 @@ dat <- dat |>
          max_cows_2 = ifelse(C_1 == 0, NA, max_cows_2),
          L1_2 = ifelse(C_1 == 0, NA, L1_2),
          L2_2 = ifelse(C_1 == 0, NA, L2_2),
+         L3_2 = ifelse(C_1 == 0, NA, L3_2),
          adj_3 = ifelse(C_2 == 0, NA, adj_3),
          max_cows_3 = ifelse(C_2 == 0, NA, max_cows_3),
          L1_3 = ifelse(C_2 == 0, NA, L1_3),
          L2_3 = ifelse(C_2 == 0, NA, L2_3),
+         L3_3 = ifelse(C_2 == 0, NA, L3_3),
          adj_4 = ifelse(C_3 == 0, NA, adj_4),
          max_cows_4 = ifelse(C_3 == 0, NA, max_cows_4),
          L1_4 = ifelse(C_3 == 0, NA, L1_4),
          L2_4 = ifelse(C_3 == 0, NA, L2_4),
+         L3_4 = ifelse(C_3 == 0, NA, L3_4),
          adj_5 = ifelse(C_4 == 0, NA, adj_5),
          max_cows_5 = ifelse(C_4 == 0, NA, max_cows_5),
          L1_5 = ifelse(C_4 == 0, NA, L1_5),
-         L2_5 = ifelse(C_4 == 0, NA, L2_5)
+         L2_5 = ifelse(C_4 == 0, NA, L2_5),
+         L3_5 = ifelse(C_4 == 0, NA, L3_5)
          )
 
 saveRDS(dat, here::here("data/analysis_data/analysis_data.rds"))

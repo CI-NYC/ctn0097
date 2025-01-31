@@ -11,7 +11,8 @@ dat <- readRDS(here::here("data/analysis_data/ctn97_analysis_data_012825.rds")) 
   ungroup() |>
   mutate(day_diff = day - day_post_consent,
          end_induction_day = end_induction_day - day_diff,
-         naltrexone_injection_day = naltrexone_injection_day - day_diff) |>
+         naltrexone_injection_day = naltrexone_injection_day - day_diff,
+         days_from_admission_to_consent = abs(consent_DMAMDDT - admission_date)) |>
   mutate(cows_score_1 = ifelse(is.na(cows_score_1) == FALSE & is.na(cows_time_1), as.numeric(NA), cows_score_1), # cases where cows score is present but time is missing -- these considered missing (only occurr in 5 cases on day 1)
          cows_score_2 = ifelse(is.na(cows_score_2) == FALSE & is.na(cows_time_2), as.numeric(NA), cows_score_2),
          cows_score_3 = ifelse(is.na(cows_score_3) == FALSE & is.na(cows_time_3), as.numeric(NA), cows_score_3),

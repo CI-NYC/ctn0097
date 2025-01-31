@@ -26,7 +26,7 @@ dat_long <- readRDS(here::here("data/analysis_data/max_cows_data_alt.rds")) |>
                                                     TRUE ~ 0),
          adj = ifelse(rowSums(cbind(A1, A2, A3), na.rm = TRUE) >= 1, 1, 0)) |>
   select(PATID, PROTSEG, naltrexone_injection_day, naltrexone_injection_time, end_induction_day, 
-         received_naltrexone_injection, day_post_consent, max_cows, max_cows_time, max_cows_ineligible, ends_with("inelig"), A1, A2, A3, adj, L1, L2, naltrexone_injection_day_shift) |>
+         received_naltrexone_injection, days_from_admission_to_consent, day_post_consent, max_cows, max_cows_time, max_cows_ineligible, ends_with("inelig"), A1, A2, A3, adj, L1, L2, naltrexone_injection_day_shift) |>
   group_by(PATID) |>
   mutate(naltrexone_injection_day = ifelse(any(naltrexone_injection_day_shift) == 1, naltrexone_injection_day - 1, naltrexone_injection_day),
          end_induction_day = ifelse(any(naltrexone_injection_day_shift) == 1, end_induction_day - 1, end_induction_day)) |>
@@ -142,6 +142,7 @@ dat <- dat |>
                           end_induction_day == 14 & received_naltrexone_injection == 0 ~ 0, 
                           TRUE ~ 1))  |>
   select(PATID, PROTSEG, received_naltrexone_injection,
+         days_from_admission_to_consent,
          starts_with("max_cows_"),
          starts_with("adj_"),
          starts_with("L"),
@@ -289,7 +290,7 @@ dat <- dat |>
          -starts_with("max_cows_time"))
 
 dat_demographics <- dat |>
-  select(PATID, PROTSEG, received_naltrexone_injection, age:last_col())
+  select(PATID, PROTSEG, received_naltrexone_injection, days_from_admission_to_consent, age:last_col())
 
 dat_time_vary <- dat |>
   select(PATID, PROTSEG, received_naltrexone_injection, max_cows_1:Y_14)
