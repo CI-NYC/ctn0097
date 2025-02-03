@@ -38,21 +38,31 @@ A <- list(c("adj_1"),
 )
 
 
-L <- list(c("max_cows_1", "max_cows_ineligible_1", 
+L <- list(c("max_cows_1", 
+            "max_cows_ineligible_1", 
             "max_cows_missing_indicator_1",
-            "L1_1", "L2_1", "L3_1"), 
-          c("max_cows_2", "max_cows_ineligible_2", 
+            #"L3_1"
+            ), 
+          c("max_cows_2", 
+            "max_cows_ineligible_2", 
             "max_cows_missing_indicator_2",
-            "L1_2", "L2_2", "L3_2"), 
-          c("max_cows_3", "max_cows_ineligible_3", 
+            #"L3_2"
+            ), 
+          c("max_cows_3", 
+            "max_cows_ineligible_3", 
             "max_cows_missing_indicator_3",
-            "L1_3", "L2_3", "L3_3"), 
-          c("max_cows_4", "max_cows_ineligible_4", 
+            #"L3_3"
+            ), 
+          c("max_cows_4", 
+            "max_cows_ineligible_4", 
             "max_cows_missing_indicator_4",
-            "L1_4", "L2_4", "L3_4"), 
-          c("max_cows_5", "max_cows_ineligible_5", 
+            #"L3_4"
+            ), 
+          c("max_cows_5", 
+            "max_cows_ineligible_5", 
             "max_cows_missing_indicator_5",
-            "L1_5", "L2_5", "L3_5")
+            #"L3_5"
+            )
 )
 
 table1 <- dat |>

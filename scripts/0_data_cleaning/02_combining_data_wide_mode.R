@@ -9,16 +9,17 @@ library(mlr3extralearners)
 
 dat_long <- readRDS(here::here("data/analysis_data/max_cows_data.rds")) |>
   mutate(A1 = case_when(day_post_consent == naltrexone_injection_day & pre_injection_clonidine >= 0.1 ~ 1, # if injection day, only look at pre-injection 
-                        is.na(max_cows) & DMCLDDTL >= 0.1 ~ 1, # looking at all clonidine in a day
+                        is.na(max_cows) & DMCLDDTL >= 0.1 ~ 1, # if cows missing, looking at all clonidine in a day
                         is.na(max_cows) == FALSE & post_cows_clonidine_dose >= 0.1 ~ 1,
                         TRUE ~ 0), # otherwise, did not receive medication
          A2 = case_when(day_post_consent == naltrexone_injection_day & pre_injection_clonazepam >= 1 ~ 1,  # if injection day, only look at pre-injection 
-                        is.na(max_cows) & DMCZPDTL >= 1 ~ 1, # looking at all clonazepam doses in a day
+                        is.na(max_cows) & DMCZPDTL >= 1 ~ 1, # if cows missing, looking at all clonazepam doses in a day
                         is.na(max_cows) == FALSE & post_cows_clonazepam_dose >= 1 ~ 1,
                         TRUE ~ 0), # otherwise, did not receive medication
          L3 = case_when(DMBZODTL > 0 ~ 1, # any benzo
                         TRUE ~ 0),
-         L1 = ifelse(DMBUPDTL > 0, 1, 0), # any bup
+         L1 = case_when(DMBUPDTL > 0 ~ 1, # any bup
+                        TRUE ~ 0), 
          L2 = ifelse(DMDROWSY == 3 | DMDIZZY == 3, 1, 0)) |> # severely dizzy or drowsy
   mutate(both_inelig = rowSums(cbind(both_inelig, L2), na.rm = TRUE)) |>
   filter(day_post_consent <= 14) |>
@@ -194,9 +195,6 @@ DEM <- read.csv(here::here("data/DEM.csv"), colClasses = c(PATID = "character"),
          DEBLACK = case_when(DEBLACK == 1 ~ 1,
                              DERACE_missing == 1 ~ as.numeric(NA),
                              TRUE ~ 0),
-         DEAMEIND = case_when(DEAMEIND == 1 ~ 1,
-                              DERACE_missing == 1 ~ as.numeric(NA),
-                              TRUE ~ 0),
          DEOTHER = case_when(DEHAWAII == 1 | DEASIAN == 1 | DESAMOAN == 1 | DEAMEIND == 1 | DERACEOT == 1 ~ 1, # other 
                              DERACE_missing == 1 ~ as.numeric(NA),
                              TRUE ~ 0)
@@ -309,23 +307,19 @@ dat <- dat |>
   mutate(adj_2 = ifelse(C_1 == 0, NA, adj_2),
          max_cows_2 = ifelse(C_1 == 0, NA, max_cows_2),
          L1_2 = ifelse(C_1 == 0, NA, L1_2),
-         L2_2 = ifelse(C_1 == 0, NA, L2_2),
          L3_2 = ifelse(C_1 == 0, NA, L3_2),
-         adj_3 = ifelse(C_2 == 0, NA, adj_3),
-         max_cows_3 = ifelse(C_2 == 0, NA, max_cows_3),
-         L1_3 = ifelse(C_2 == 0, NA, L1_3),
-         L2_3 = ifelse(C_2 == 0, NA, L2_3),
-         L3_3 = ifelse(C_2 == 0, NA, L3_3),
-         adj_4 = ifelse(C_3 == 0, NA, adj_4),
-         max_cows_4 = ifelse(C_3 == 0, NA, max_cows_4),
-         L1_4 = ifelse(C_3 == 0, NA, L1_4),
-         L2_4 = ifelse(C_3 == 0, NA, L2_4),
-         L3_4 = ifelse(C_3 == 0, NA, L3_4),
-         adj_5 = ifelse(C_4 == 0, NA, adj_5),
-         max_cows_5 = ifelse(C_4 == 0, NA, max_cows_5),
-         L1_5 = ifelse(C_4 == 0, NA, L1_5),
-         L2_5 = ifelse(C_4 == 0, NA, L2_5),
-         L3_5 = ifelse(C_4 == 0, NA, L3_5)
+         adj_3 = ifelse(C_2 == 0 | Y_2 == 1, NA, adj_3),
+         max_cows_3 = ifelse(C_2 == 0 | Y_2 == 1, NA, max_cows_3),
+         L1_3 = ifelse(C_2 == 0 | Y_2 == 1, NA, L1_3),
+         L3_3 = ifelse(C_2 == 0 | Y_2 == 1, NA, L3_3),
+         adj_4 = ifelse(C_3 == 0 | Y_2 == 1, NA, adj_4),
+         max_cows_4 = ifelse(C_3 == 0 | Y_3 == 1, NA, max_cows_4),
+         L1_4 = ifelse(C_3 == 0 | Y_3 == 1, NA, L1_4),
+         L3_4 = ifelse(C_3 == 0 | Y_3 == 1, NA, L3_4),
+         adj_5 = ifelse(C_4 == 0 | Y_4 == 1, NA, adj_5),
+         max_cows_5 = ifelse(C_4 == 0 | Y_4 == 1, NA, max_cows_5),
+         L1_5 = ifelse(C_4 == 0 | Y_4 == 1, NA, L1_5),
+         L3_5 = ifelse(C_4 == 0 | Y_4 == 1, NA, L3_5)
          )
 
 # imputing values with mode/median

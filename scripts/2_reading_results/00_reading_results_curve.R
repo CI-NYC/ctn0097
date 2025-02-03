@@ -19,7 +19,7 @@ isotonic_projection <- function(x, alpha = 0.05) {
 }
 
 read_results <- function(day, shift){
-  data <- readRDS(here::here(paste0("results_012825/results_shift_", shift, "_day_", day, "_1", ".rds")))
+  data <- readRDS(here::here(paste0("results_alt/results_shift_", shift, "_day_", day, "_1", ".rds")))
 }
 
 
