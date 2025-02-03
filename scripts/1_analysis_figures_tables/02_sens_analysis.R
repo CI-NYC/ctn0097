@@ -56,44 +56,44 @@ A <- list(c("adj_1"),
 )
 
 L <- list(c("max_cows_1", 
-            "max_cows_ineligible_1", 
+            "max_cows_eligible_1", 
             "max_cows_missing_indicator_1"), 
           c("max_cows_2", 
-            "max_cows_ineligible_2", 
+            "max_cows_eligible_2", 
             "max_cows_missing_indicator_2"), 
           c("max_cows_3", 
-            "max_cows_ineligible_3", 
+            "max_cows_eligible_3", 
             "max_cows_missing_indicator_3"), 
           c("max_cows_4", 
-            "max_cows_ineligible_4", 
+            "max_cows_eligible_4", 
             "max_cows_missing_indicator_4"), 
           c("max_cows_5", 
-            "max_cows_ineligible_5", 
+            "max_cows_eligible_5", 
             "max_cows_missing_indicator_5")
 )
 
 dat_shifted_5 <- dat |>
-  mutate(adj_1 = ifelse(max_cows_1 >= 5 & max_cows_ineligible_1 == 0 & max_cows_missing_indicator_1 == 0
+  mutate(adj_1 = ifelse(max_cows_1 >= 5 & max_cows_eligible_1 == 1 & max_cows_missing_indicator_1 == 0
                         , 1, 0),
-         adj_2 = ifelse(max_cows_2 >= 5 & max_cows_ineligible_2 == 0 & max_cows_missing_indicator_2 == 0
+         adj_2 = ifelse(max_cows_2 >= 5 & max_cows_eligible_2 == 1 & max_cows_missing_indicator_2 == 0
                         , 1, 0),
-         adj_3 = ifelse(max_cows_3 >= 5 & max_cows_ineligible_3 == 0 & max_cows_missing_indicator_3 == 0
+         adj_3 = ifelse(max_cows_3 >= 5 & max_cows_eligible_3 == 1 & max_cows_missing_indicator_3 == 0
                         , 1, 0),
-         adj_4 = ifelse(max_cows_4 >= 5 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_4 == 0
+         adj_4 = ifelse(max_cows_4 >= 5 & max_cows_eligible_4 == 1 & max_cows_missing_indicator_4 == 0
                         , 1, 0),
-         adj_5 = ifelse(max_cows_5 >= 5 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_5 == 0
+         adj_5 = ifelse(max_cows_5 >= 5 & max_cows_eligible_5 == 1 & max_cows_missing_indicator_5 == 0
                         , 1, 0))
 
 dat_shifted_3 <- dat |>
-  mutate(adj_1 = ifelse(max_cows_1 >= 3 & max_cows_ineligible_1 == 0 & max_cows_missing_indicator_1 == 0
+  mutate(adj_1 = ifelse(max_cows_1 >= 3 & max_cows_eligible_1 == 1 & max_cows_missing_indicator_1 == 0
                         , 1, 0),
-         adj_2 = ifelse(max_cows_2 >= 3 & max_cows_ineligible_2 == 0 & max_cows_missing_indicator_2 == 0
+         adj_2 = ifelse(max_cows_2 >= 3 & max_cows_eligible_2 == 1 & max_cows_missing_indicator_2 == 0
                         , 1, 0),
-         adj_3 = ifelse(max_cows_3 >= 3 & max_cows_ineligible_3 == 0 & max_cows_missing_indicator_3 == 0
+         adj_3 = ifelse(max_cows_3 >= 3 & max_cows_eligible_3 == 1 & max_cows_missing_indicator_3 == 0
                         , 1, 0),
-         adj_4 = ifelse(max_cows_4 >= 3 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_4 == 0
+         adj_4 = ifelse(max_cows_4 >= 3 & max_cows_eligible_4 == 1 & max_cows_missing_indicator_4 == 0
                         , 1, 0),
-         adj_5 = ifelse(max_cows_5 >= 3 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_5 == 0
+         adj_5 = ifelse(max_cows_5 >= 3 & max_cows_eligible_5 == 1 & max_cows_missing_indicator_5 == 0
                         , 1, 0))
 
 dat_shifted_always <- dat  |>
