@@ -4,10 +4,10 @@ library(hms)
 
 # enrollment data
 enrollment <- read.csv("data/EC0097C.csv", colClasses = c(PATID = "character")) |>
-  mutate(PROTSEG = "C") |>
+  mutate(PROTSEG = "C") |> # standard procedure
   select(PATID, E97ADMDT, PROTSEG) |>
   merge(read.csv("data/EC0097D.csv", colClasses = c(PATID = "character")) |>
-          mutate(PROTSEG = "D") |>
+          mutate(PROTSEG = "D") |> # rapid procedure
           select(PATID, E97ADMDT, PROTSEG), all = TRUE) |>
   rename("admission_date" = "E97ADMDT")
 
@@ -36,48 +36,48 @@ DMA <- DMA |>
 DMA <- DMA |> 
   mutate(DMBUPD07 = ifelse(PATID == "02217009700004" & VISNO == "IN03", 1, as.numeric(NA)),
          DMBUPT07 = ifelse(PATID == "02217009700004" & VISNO == "IN03", "19:50:00", NA)) |>
-  mutate(DMBUPT07 = hms::as_hms(DMBUPT07)) |>
+  mutate(DMBUPT07 = hms::as_hms(DMBUPT07)) |> # adding a 7th bup column for this indivdual 
   rowwise() |>
-  mutate(DMBUPDTL = sum(DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, na.rm = TRUE)) |>
+  mutate(DMBUPDTL = sum(DMBUPD01, DMBUPD02, DMBUPD03, DMBUPD04, DMBUPD05, DMBUPD06, DMBUPD07, na.rm = TRUE)) |> # making sum of all bup over the day to include 7th column (only changes the one patient)
   relocate(DMBUPT07, .after = DMBUPT06) |>
   filter(!(PATID == "02217009700004" & VISNO == "I03A"))|>
-  mutate(DMAMDDT = ifelse(is.na(DMAMDDT), admission_date, DMAMDDT)) |>
-  complete(PATID, DMAMDDT) |>
+  relocate(admission_date, .after = SITE) |>
+  mutate(DMAMDDT = ifelse(is.na(DMAMDDT), admission_date, DMAMDDT)) |> # 3 instances of missing date -- make this the admission date
+  complete(PATID, DMAMDDT) |> # checking for missing days between admission and end of initiation date
   group_by(PATID) |>
-  fill(c(admission_date), .direction = "downup")
+  fill(c(admission_date), .direction = "downup") |> # admission date doesn't change -- can impute
+  filter(DMAMDDT >= admission_date) |> 
+  arrange(PATID, DMAMDDT) 
 
 # consent data
-
 consent <- read.csv("data/EC0097B_0730.csv", colClasses = c(PATID = "character")) |>
   filter(is.na(STARTDT) == FALSE) |>
   select(PATID, STARTDT) |>
-  rename("consent_DMAMDDT" = "STARTDT")
+  rename("consent_DMAMDDT" = "STARTDT") # day of signed consent
 
+# COWS data
 COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
   filter(PROT == "0097") |>
   mutate(across(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR,
-                  COYAWN, COANXITY, COGOOSKN), ~ coalesce(., 0))) |> # impute missing values with 0
+                  COYAWN, COANXITY, COGOOSKN), ~ coalesce(., 0))) |> # missing values = 0
   rowwise() |>
   mutate(cows_score = case_when(is.na(COCOWSCR) & is.na(COWSCRRT) == FALSE ~ COWSCRRT, # if missing COWS but retrospective available, use that
                                 # patient notes inidicating that these patients did not receive/finish COWS assessments at the visits
-                              PATID == "02201009700118" & VISNO == "IN02" ~ as.numeric(NA),
-                              PATID == "02076009700045" & VISNO == "IN08" ~ as.numeric(NA),
-                              PATID == "02076009700335" & VISNO == "B00" ~ as.numeric(NA),
-                              TRUE ~ sum(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR, # some categories missing information but still taking sum (these were imputed with 0)
-                                                  COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- sometimes doesn't match sum -- we will take sum for now
-                              )) |>
+                                PATID == "02201009700118" & VISNO == "IN02" ~ as.numeric(NA),
+                                PATID == "02076009700045" & VISNO == "IN08" ~ as.numeric(NA),
+                                PATID == "02076009700335" & VISNO == "B00" ~ as.numeric(NA),
+                                TRUE ~ sum(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR, # some categories missing information but still taking sum (these were imputed with 0)
+                                             COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- sometimes doesn't match sum -- we will take sum for now
+  )) |>
   left_join(enrollment, by = c("PATID" = "PATID")) |>
   rename("cows_time" = "COASMTM") |>
   filter(COWASMDT >= admission_date) |>
   select(PATID, COWASMDT, cows_time, cows_score) |>
   arrange(PATID, COWASMDT, cows_time) |>
   group_by(PATID, COWASMDT) |> 
-  mutate(number = row_number()) |>
-  mutate(
-    score_col = paste0("", number)
-  ) |>
-  select(-number) |>
-  pivot_wider(names_from = c(score_col), 
+  mutate(number = row_number(),
+         number = as.character(number)) |>
+  pivot_wider(names_from = c(number), 
               values_from = c(cows_time, cows_score)) |>
   rename("DMAMDDT" = "COWASMDT") 
 
@@ -90,6 +90,7 @@ full_data <- full_data |>
   relocate(admission_date, .after = PATID) |>
   mutate(DMAMDDT = ifelse(is.na(DMAMDDT), admission_date, DMAMDDT)) |> # for 2 cases of missing day (only day), then use as day 1
   filter(admission_date <= DMAMDDT) |>
+  # calculating day number
   mutate(day = case_when(admission_date == DMAMDDT ~ 1,
                          admission_date < DMAMDDT ~ DMAMDDT - admission_date + 1,
                          TRUE ~ NA
@@ -124,10 +125,10 @@ induction_end <- full_data |>
   rename("naltrexone_injection_time" = "EOIINJTM") |>
   mutate(naltrexone_injection_time = as_hms(paste0(naltrexone_injection_time, ":00"))) |>
   full_join(full_data |>
-  filter(EITERMDT == DMAMDDT) |>
-  mutate(EITERMDT = day) |>
-  select(PATID, EITERMDT) |>
-  rename("end_induction_day" = "EITERMDT")) |>
+              filter(EITERMDT == DMAMDDT) |>
+              mutate(EITERMDT = day) |>
+              select(PATID, EITERMDT) |>
+              rename("end_induction_day" = "EITERMDT")) |>
   mutate(end_induction_day = ifelse(is.na(end_induction_day), naltrexone_injection_day, end_induction_day)) |>
   mutate(received_naltrexone_injection = ifelse(is.na(naltrexone_injection_day) == FALSE, 1, 0))
 
@@ -139,7 +140,7 @@ full_data <- full_data |>
   ungroup() |>
   #complete(PATID, day) |>
   group_by(PATID) |>
-  fill(c(PROTSEG, consent_DMAMDDT, SITE, end_induction_day, received_naltrexone_injection, naltrexone_injection_day, naltrexone_injection_time), .direction = "downup") |>
+  fill(c(PROTSEG, consent_DMAMDDT, SITE, end_induction_day, received_naltrexone_injection, naltrexone_injection_day, naltrexone_injection_time), .direction = "downup") |> # these variables never change
   ungroup() |>
   select(-max_day) |>
   filter(day >= 1) |>
@@ -190,7 +191,7 @@ full_data <- full_data |>
 full_data_final <- full_data |>
   filter(day <= end_induction_day)
 
-saveRDS(full_data_final, here::here("data/analysis_data/ctn97_analysis_data_012825.rds"))
+saveRDS(full_data_final, here::here("data/analysis_data/ctn97_analysis_data_final.rds"))
   
 
 #  full_data |>
