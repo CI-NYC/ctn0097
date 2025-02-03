@@ -7,13 +7,15 @@ dat <- readRDS(here::here("data/analysis_data/ctn97_analysis_data_final.rds")) |
   filter(DMAMDDT >= consent_DMAMDDT) |> # filtering out to only after patient consented into study
   arrange(PATID, DMAMDDT) |>
   group_by(PATID) |>
-  mutate(day_post_consent = row_number()) |> # creating new "day" variable
+  mutate(day_post_consent = case_when(consent_DMAMDDT == DMAMDDT ~ 1,
+                                      consent_DMAMDDT < DMAMDDT ~ DMAMDDT - consent_DMAMDDT + 1,
+                                       TRUE ~ NA)) |> # creating new "day" variable
   ungroup() |>
   mutate(day_diff = day - day_post_consent,
          end_induction_day = end_induction_day - day_diff,
          naltrexone_injection_day = naltrexone_injection_day - day_diff,
          days_from_admission_to_consent = abs(consent_DMAMDDT - admission_date)) |>
-  mutate(cows_score_1 = ifelse(is.na(cows_score_1) == FALSE & is.na(cows_time_1), as.numeric(NA), cows_score_1), # cases where cows score is present but time is missing -- these considered missing (only occurr in 5 cases on day 1)
+  mutate(cows_score_1 = ifelse(is.na(cows_score_1) == FALSE & is.na(cows_time_1), as.numeric(NA), cows_score_1), # cases where cows score is present but time is missing -- these considered missing (only occur in 5 cases on day 1)
          cows_score_2 = ifelse(is.na(cows_score_2) == FALSE & is.na(cows_time_2), as.numeric(NA), cows_score_2),
          cows_score_3 = ifelse(is.na(cows_score_3) == FALSE & is.na(cows_time_3), as.numeric(NA), cows_score_3),
          cows_score_4 = ifelse(is.na(cows_score_4) == FALSE & is.na(cows_time_4), as.numeric(NA), cows_score_4),
@@ -252,16 +254,16 @@ cows_info <- dat |>
 cows_info_clonidine <- cows_info |>
   left_join(dat_clonidine_long) |>
   rowwise() |>
-  filter(max_cows_time <= DMCLDT & 
-           (!is.na(next_cows_time) & next_cows_time > DMCLDT) | is.na(next_cows_time) | is.na(DMCLDT)) |>
+  filter((max_cows_time <= DMCLDT & 
+           (!is.na(next_cows_time) & next_cows_time > DMCLDT)) | is.na(next_cows_time) | is.na(DMCLDT)) |>
   group_by(PATID, day_post_consent, max_cows_time) |>
   summarize(post_cows_clonidine_dose = sum(DMCLDD, na.rm = TRUE))
 
 cows_info_clonazepam <- cows_info |>
   left_join(dat_clonazepam_long) |>
   rowwise() |>
-  filter(max_cows_time <= DMCZPT & 
-           (!is.na(next_cows_time) & next_cows_time > DMCZPT) | is.na(next_cows_time) | is.na(DMCZPT)) |>
+  filter((max_cows_time <= DMCZPT & 
+           (!is.na(next_cows_time) & next_cows_time > DMCZPT)) | is.na(next_cows_time) | is.na(DMCZPT)) |>
   group_by(PATID, day_post_consent, max_cows_time) |>
   summarize(post_cows_clonazepam_dose = sum(DMCZPD, na.rm = TRUE))
   
@@ -271,21 +273,24 @@ dat_with_dosing <- dat |>
   mutate(post_cows_clonidine_dose = ifelse(is.na(post_cows_clonidine_dose), 0, post_cows_clonidine_dose),
          post_cows_clonazepam_dose = ifelse(is.na(post_cows_clonazepam_dose), 0, post_cows_clonazepam_dose))
 
-pre_naltrexone_dosing <- dat_with_dosing |> 
+naltrexone_dosing_clonidine <- dat_with_dosing |> 
   filter(naltrexone_injection_day == day_post_consent) |>
   select(PATID, day_post_consent, naltrexone_injection_day, naltrexone_injection_time, max_cows_time) |>
-  #left_join(dat_bup_long) |> # no BUP post-injection exists
-  left_join(dat_clonidine_long) |>
+  left_join(dat_clonidine_long)
+
+naltrexone_dosing_clonazepam <- dat_with_dosing |> 
+  filter(naltrexone_injection_day == day_post_consent) |>
+  select(PATID, day_post_consent, naltrexone_injection_day, naltrexone_injection_time, max_cows_time) |>
   left_join(dat_clonazepam_long)
 
 # finding medication occurring pre-injection and post-cows (if it exists) 
-pre_naltrexone_dosing_clonidine <- pre_naltrexone_dosing |>
+pre_naltrexone_dosing_clonidine <- naltrexone_dosing_clonidine |>
   group_by(PATID, day_post_consent, max_cows_time, naltrexone_injection_time) |>
   filter((DMCLDT <= naltrexone_injection_time) & 
            (DMCLDT >= ifelse(is.na(max_cows_time) == FALSE, max_cows_time, TRUE))) |>
   summarize(pre_injection_clonidine = sum(DMCLDD, na.rm = TRUE))
 
-pre_naltrexone_dosing_clonazepam <- pre_naltrexone_dosing |>
+pre_naltrexone_dosing_clonazepam <- naltrexone_dosing_clonazepam |>
   group_by(PATID, day_post_consent, max_cows_time, naltrexone_injection_time) |>
   filter((DMCZPT <= naltrexone_injection_time) & 
            (DMCZPT >= ifelse(is.na(max_cows_time) == FALSE, max_cows_time, TRUE))) |>
@@ -298,51 +303,6 @@ dat_with_dosing <- dat_with_dosing |>
            pre_injection_clonazepam = ifelse(day_post_consent == naltrexone_injection_day & is.na(pre_injection_clonazepam), 0, pre_injection_clonazepam))
 
 saveRDS(dat_with_dosing, here::here("data/analysis_data/max_cows_data.rds"))
-
-dat_with_dosing <- readRDS(here::here("data/analysis_data/max_cows_data.rds"))
-
-
-dat_with_dosing |>
-  group_by(day_post_consent, max_cows > 8) |>
-  summarize(count = n(),
-            both_clonidine_and_clonazepam = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
-                                                         post_cows_clonazepam_dose >= 1 & max_cows_ineligible == 0, 1, 0), na.rm = TRUE),
-            clonidine_only = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
-                                          post_cows_clonazepam_dose < 1 & max_cows_ineligible == 0, 1, 0), na.rm = TRUE),
-            clonazepam_only = sum(ifelse(post_cows_clonidine_dose < 0.1 & 
-                                           post_cows_clonazepam_dose >= 1 & max_cows_ineligible == 0, 1, 0), na.rm = TRUE)
-  ) |>
-  view()
-
-
-dat_with_dosing |>
-  filter(max_cows_ineligible == 1) |>
-  group_by(day_post_consent, max_cows >= 8) |>
-  summarize(count = n(),
-            both_clonidine_and_clonazepam = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
-                                                         post_cows_clonazepam_dose >= 1, 1, 0), na.rm = TRUE),
-            clonidine_only = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
-                                          post_cows_clonazepam_dose < 1, 1, 0), na.rm = TRUE),
-            clonazepam_only = sum(ifelse(post_cows_clonidine_dose < 0.1 & 
-                                           post_cows_clonazepam_dose >= 1, 1, 0), na.rm = TRUE)
-            ) |>
-  view()
-
-dat_with_dosing |>
-  filter(max_cows_ineligible == 0) |>
-  group_by(day_post_consent, max_cows >= 8) |>
-  summarize(count = n(),
-            both_clonidine_and_clonazepam = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
-                                                         post_cows_clonazepam_dose >= 1, 1, 0), na.rm = TRUE),
-            clonidine_only = sum(ifelse(post_cows_clonidine_dose >= 0.1 & 
-                                          post_cows_clonazepam_dose < 1, 1, 0), na.rm = TRUE),
-            clonazepam_only = sum(ifelse(post_cows_clonidine_dose < 0.1 & 
-                                           post_cows_clonazepam_dose >= 1, 1, 0), na.rm = TRUE)
-  ) |>
-  view()
-
-  
-
 
 
 
