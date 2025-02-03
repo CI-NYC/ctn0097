@@ -55,45 +55,50 @@ A <- list(c("adj_1"),
           c("adj_5")
 )
 
-L <- list(c("max_cows_1", "max_cows_ineligible_1", 
+L <- list(c("max_cows_1", 
+            "max_cows_ineligible_1", 
             "max_cows_missing_indicator_1",
-            "L1_1", "L3_1"), 
-          c("max_cows_2", "max_cows_ineligible_2", 
+            "L1_1"), #buprenorphine
+          c("max_cows_2", 
+            "max_cows_ineligible_2", 
             "max_cows_missing_indicator_2",
-            "L1_2", "L3_2"), 
-          c("max_cows_3", "max_cows_ineligible_3", 
+            "L1_2"), #buprenorphine
+          c("max_cows_3", 
+            "max_cows_ineligible_3", 
             "max_cows_missing_indicator_3",
-            "L1_3", "L3_3"), 
-          c("max_cows_4", "max_cows_ineligible_4", 
+            "L1_3"), #buprenorphine
+          c("max_cows_4", 
+            "max_cows_ineligible_4", 
             "max_cows_missing_indicator_4",
-            "L1_4", "L3_4"), 
-          c("max_cows_5", "max_cows_ineligible_5", 
+            "L1_4"), #buprenorphine
+          c("max_cows_5", 
+            "max_cows_ineligible_5", 
             "max_cows_missing_indicator_5",
-            "L1_5", "L3_5")
+            "L1_5") #buprenorphine
 )
 
 dat_shifted_5 <- dat |>
-  mutate(adj_1 = ifelse(max_cows_1 >= 5 & L2_1 == 0 & max_cows_ineligible_1 == 0 & max_cows_missing_indicator_1 == 0
+  mutate(adj_1 = ifelse(max_cows_1 >= 5 & max_cows_ineligible_1 == 0 & max_cows_missing_indicator_1 == 0
                         , 1, 0),
-         adj_2 = ifelse(max_cows_2 >= 5 & L2_2 == 0 & max_cows_ineligible_2 == 0 & max_cows_missing_indicator_2 == 0
+         adj_2 = ifelse(max_cows_2 >= 5 & max_cows_ineligible_2 == 0 & max_cows_missing_indicator_2 == 0
                         , 1, 0),
-         adj_3 = ifelse(max_cows_3 >= 5 & L2_3 == 0 & max_cows_ineligible_3 == 0 & max_cows_missing_indicator_3 == 0
+         adj_3 = ifelse(max_cows_3 >= 5 & max_cows_ineligible_3 == 0 & max_cows_missing_indicator_3 == 0
                         , 1, 0),
-         adj_4 = ifelse(max_cows_4 >= 5 & L2_4 == 0 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_4 == 0
+         adj_4 = ifelse(max_cows_4 >= 5 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_4 == 0
                         , 1, 0),
-         adj_5 = ifelse(max_cows_5 >= 5 & L2_4 == 0 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_5 == 0
+         adj_5 = ifelse(max_cows_5 >= 5 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_5 == 0
                         , 1, 0))
 
 dat_shifted_3 <- dat |>
-  mutate(adj_1 = ifelse(max_cows_1 >= 3 & L2_1 == 0 & max_cows_ineligible_1 == 0 & max_cows_missing_indicator_1 == 0
+  mutate(adj_1 = ifelse(max_cows_1 >= 3 & max_cows_ineligible_1 == 0 & max_cows_missing_indicator_1 == 0
                         , 1, 0),
-         adj_2 = ifelse(max_cows_2 >= 3 & L2_2 == 0 & max_cows_ineligible_2 == 0 & max_cows_missing_indicator_2 == 0
+         adj_2 = ifelse(max_cows_2 >= 3 & max_cows_ineligible_2 == 0 & max_cows_missing_indicator_2 == 0
                         , 1, 0),
-         adj_3 = ifelse(max_cows_3 >= 3 & L2_3 == 0 & max_cows_ineligible_3 == 0 & max_cows_missing_indicator_3 == 0
+         adj_3 = ifelse(max_cows_3 >= 3 & max_cows_ineligible_3 == 0 & max_cows_missing_indicator_3 == 0
                         , 1, 0),
-         adj_4 = ifelse(max_cows_4 >= 3 & L2_4 == 0 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_4 == 0
+         adj_4 = ifelse(max_cows_4 >= 3 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_4 == 0
                         , 1, 0),
-         adj_5 = ifelse(max_cows_5 >= 3 & L2_4 == 0 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_5 == 0
+         adj_5 = ifelse(max_cows_5 >= 3 & max_cows_ineligible_4 == 0 & max_cows_missing_indicator_5 == 0
                         , 1, 0))
 
 dat_shifted_always <- dat  |>
@@ -136,8 +141,8 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
     learners_outcome = learners,
     learners_trt = learners,
     folds = folds, 
-    control = lmtp_control(.learners_outcome_folds = 20,
-                           .learners_trt_folds = 20,
+    control = lmtp_control(.learners_outcome_folds = 10,
+                           .learners_trt_folds = 10,
                            .trim = 0.95), # look at trim
     mtp = FALSE,
     id = NULL)
@@ -160,15 +165,15 @@ for (i in 14:5)
     # 
     # saveRDS(results_shift_obs, here::here(paste0("results_alt/results_obs_day_", i, ".rds")))
 
-set.seed(9)
-results_shift_5 <- run_lmtp(data = dat,
-                            day = i,
-                            shift = dat_shifted_5,
-                            learners = learners,
-                            folds = 20
-)
-
-saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i, ".rds")))
+# set.seed(9)
+# results_shift_5 <- run_lmtp(data = dat,
+#                             day = i,
+#                             shift = dat_shifted_5,
+#                             learners = learners,
+#                             folds = 20
+# )
+# 
+# saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i, ".rds")))
 
     # set.seed(9)
     # results_shift_3 <- run_lmtp(data = dat,
@@ -180,12 +185,12 @@ saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i
     # 
     # saveRDS(results_shift_3, here::here(paste0("results_alt/results_shift_3_day_", i, ".rds")))
 
-    # set.seed(9)
-    # results_shift_always <- run_lmtp(data = dat,
-    #                             day = i,
-    #                             shift = dat_shifted_always,
-    #                             learners = learners,
-    #                             folds = 20
-    # )
-    # saveRDS(results_shift_always, here::here(paste0("results_alt/results_shift_always_day_", i, ".rds")))
+    set.seed(9)
+    results_shift_always <- run_lmtp(data = dat,
+                                day = i,
+                                shift = dat_shifted_always,
+                                learners = learners,
+                                folds = 20
+    )
+    saveRDS(results_shift_always, here::here(paste0("results_alt/results_shift_always_day_", i, ".rds")))
 }

@@ -1,7 +1,6 @@
 #devtools::install_github("nt-williams/lmtp@competing-risks")
 library(lmtp)
 library(tidyverse)
-library(mice)
 library(mlr3)
 library(mlr3learners)
 library(mlr3extralearners)
@@ -10,29 +9,31 @@ library(mlr3extralearners)
 
 dat_long <- readRDS(here::here("data/analysis_data/max_cows_data.rds")) |>
   mutate(A1 = case_when(day_post_consent == naltrexone_injection_day & pre_injection_clonidine >= 0.1 ~ 1, # if injection day, only look at pre-injection 
-                        is.na(max_cows) & DMCLDDTL >= 0.1 ~ 1, #& DMCLDDTL >= 0.1 ~ 1, # if cows missing then do all medications over the day
-                        is.na(max_cows) == FALSE & post_cows_clonidine_dose >= 0.1 ~ 1, # if cows not missing, then look at post-cows dose
+                        is.na(max_cows) & DMCLDDTL >= 0.1 ~ 1, # looking at all clonidine in a day
+                        is.na(max_cows) == FALSE & post_cows_clonidine_dose >= 0.1 ~ 1,
                         TRUE ~ 0), # otherwise, did not receive medication
          A2 = case_when(day_post_consent == naltrexone_injection_day & pre_injection_clonazepam >= 1 ~ 1,  # if injection day, only look at pre-injection 
-                        is.na(max_cows) & DMCZPDTL >= 1 ~ 1, #& DMCZPDTL >= 1 ~ 1, # if cows missing then do all medications over the day
-                        is.na(max_cows) == FALSE & post_cows_clonazepam_dose >= 1 ~ 1, # if cows not missing, then look at post-cows dose
+                        is.na(max_cows) & DMCZPDTL >= 1 ~ 1, # looking at all clonazepam doses in a day
+                        is.na(max_cows) == FALSE & post_cows_clonazepam_dose >= 1 ~ 1,
                         TRUE ~ 0), # otherwise, did not receive medication
-         L3 = case_when(DMBZODTL > 0 ~ 1,
+         L3 = case_when(DMBZODTL > 0 ~ 1, # any benzo
                         TRUE ~ 0),
-         L1 = ifelse(DMBUPDTL > 0, 1, 0),
-         L2 = ifelse(DMDROWSY == 3 | DMDIZZY == 3, 1, 0)) |>
+         L1 = ifelse(DMBUPDTL > 0, 1, 0), # any bup
+         L2 = ifelse(DMDROWSY == 3 | DMDIZZY == 3, 1, 0)) |> # severely dizzy or drowsy
+  mutate(both_inelig = rowSums(cbind(both_inelig, L2), na.rm = TRUE)) |>
   filter(day_post_consent <= 14) |>
   mutate_at(vars(starts_with("L")), ~ if_else(is.na(.), 0, .)) |>
   rename("max_cows_ineligible" = "both_inelig") |>
-  mutate(naltrexone_injection_day_shift = case_when(naltrexone_injection_day == day_post_consent & is.na(max_cows_time) & pre_injection_clonidine == 0 & pre_injection_clonazepam == 0 ~ 1, # if no cows on day x, then injection counted as previous day
-                                                    TRUE ~ 0),
+  mutate(#naltrexone_injection_day_shift = case_when(naltrexone_injection_day == day_post_consent & is.na(max_cows_time) & pre_injection_clonidine == 0 & pre_injection_clonazepam == 0 ~ 1, # if no cows on day x, then injection counted as previous day
+        #                                            TRUE ~ 0),
+    naltrexone_injection_day_shift = naltrexone_injection_day,
          adj = ifelse(rowSums(cbind(A1, A2), na.rm = TRUE) >= 1, 1, 0)) |>
   select(PATID, PROTSEG, naltrexone_injection_day, naltrexone_injection_time, end_induction_day, 
          received_naltrexone_injection, days_from_admission_to_consent, day_post_consent, max_cows, max_cows_time, max_cows_ineligible, ends_with("inelig"), A1, A2, L3, adj, L1, L2, naltrexone_injection_day_shift) |>
   group_by(PATID) |>
-  mutate(naltrexone_injection_day = ifelse(any(naltrexone_injection_day_shift) == 1, naltrexone_injection_day - 1, naltrexone_injection_day),
-         end_induction_day = ifelse(any(naltrexone_injection_day_shift) == 1, end_induction_day - 1, end_induction_day)) |>
-  select(-naltrexone_injection_day_shift) |>
+  #mutate(naltrexone_injection_day = ifelse(any(naltrexone_injection_day_shift) == 1, naltrexone_injection_day - 1, naltrexone_injection_day),
+  #       end_induction_day = ifelse(any(naltrexone_injection_day_shift) == 1, end_induction_day - 1, end_induction_day)) |>
+  #select(-naltrexone_injection_day_shift) |>
   filter(day_post_consent <= end_induction_day) |>
   mutate(max_cows_missing_indicator = ifelse(is.na(max_cows), 1, 0),
          max_cows = ifelse(is.na(max_cows), 0, max_cows), # replacing missing max cows with 0 
@@ -182,9 +183,10 @@ dat <- dat |>
 DEM <- read.csv(here::here("data/DEM.csv"), colClasses = c(PATID = "character"), na.strings = "") |>
   mutate(is_hispanic = case_when(DEHISPNC == 1 ~ 1,
                                  DEHISPNC == 0 ~ 0,
-                                 DEHISPNC == 97 ~ as.numeric(NA),
+                                 DEHISPNC == 97 ~ as.numeric(NA), # don't know
+                                 DEHISPNC == 98 ~ as.numeric(NA), # refused
                                  TRUE ~ as.numeric(NA)),
-         DERACE_missing = case_when(DERACEDK == 1 | DERACERF == 1 ~ 1, 
+         DERACE_missing = case_when(DERACEDK == 1 | DERACERF == 1 ~ 1, # don't know or refuse
                                     TRUE ~ 0),
          DEWHITE = case_when(DEWHITE == 1 ~ 1,
                              DERACE_missing == 1 ~ as.numeric(NA),
@@ -195,11 +197,11 @@ DEM <- read.csv(here::here("data/DEM.csv"), colClasses = c(PATID = "character"),
          DEAMEIND = case_when(DEAMEIND == 1 ~ 1,
                               DERACE_missing == 1 ~ as.numeric(NA),
                               TRUE ~ 0),
-         DEAAPI = case_when(DEHAWAII == 1 | DEASIAN == 1 ~ 1,
-                            DERACE_missing == 1 ~ as.numeric(NA),
-                            TRUE ~ 0)
+         DEOTHER = case_when(DEHAWAII == 1 | DEASIAN == 1 | DESAMOAN == 1 | DEAMEIND == 1 | DERACEOT == 1 ~ 1, # other 
+                             DERACE_missing == 1 ~ as.numeric(NA),
+                             TRUE ~ 0)
   ) |>
-  select(PATID, age, DESEX, is_hispanic, DEWHITE, DEBLACK, DEAMEIND, DEAAPI, DERACE_missing)
+  select(PATID, age, DESEX, is_hispanic, DEWHITE, DEBLACK, DEOTHER, DERACE_missing)
 
 # mental health vars
 MHX <- read.csv(here::here("data/MHX.csv"), colClasses = c(PATID = "character"), na.strings = "") |>
@@ -208,7 +210,7 @@ MHX <- read.csv(here::here("data/MHX.csv"), colClasses = c(PATID = "character"),
          "bipolar" = "MHBPLRH",
          "depression" = "MHMDDH")
 
-# substance use vars
+# substance use vars, 4 is none, we are considering mild, moderate, or severe
 DSM <- read.csv(here::here("data/DSM.csv"), colClasses = c(PATID = "character"), na.strings = "") |>
   mutate(alcohol_use_disorder = ifelse(DSALCSCO < 4, 1, 0),
          amphetamine_use_disorder = ifelse(DSAMPSCO < 4, 1, 0),
@@ -219,14 +221,14 @@ DSM <- read.csv(here::here("data/DSM.csv"), colClasses = c(PATID = "character"),
   select(PATID, ends_with("disorder"))
 
 ASU <- read.csv(here::here("data/ASU.csv"), colClasses = c(PATID = "character"), na.strings = "") |>
-  mutate(age_first_opioid_use = case_when(AUPNKAGE < AUHERAGE & is.na(AUPNKAGE) == FALSE & is.na(AUHERAGE) == FALSE ~ AUPNKAGE, 
-                                          AUPNKAGE >= AUHERAGE & is.na(AUPNKAGE) == FALSE & is.na(AUHERAGE) == FALSE ~ AUHERAGE, 
+  mutate(age_first_opioid_use = case_when(is.na(AUPNKAGE) == FALSE & is.na(AUHERAGE) == FALSE & AUPNKAGE < AUHERAGE ~ AUPNKAGE, # if painkiller age is lower than heroin age, take lower
+                                          is.na(AUPNKAGE) == FALSE & is.na(AUHERAGE) == FALSE & AUPNKAGE >= AUHERAGE ~ AUHERAGE, # if painkiller age is greater than heroin age, take lower
                                           is.na(AUPNKAGE) == FALSE & is.na(AUHERAGE) == TRUE ~ AUPNKAGE,
                                           is.na(AUPNKAGE) == TRUE & is.na(AUHERAGE) == FALSE ~ AUHERAGE,
                                           TRUE ~ as.numeric(NA)),
-         injection_opioid_use = case_when(AUPNKRTE == 4 | AUPNKRTE == 5 | AUHERRTE == 4 | AUHERRTE == 5 ~ 1, #IV or non-IV injcection
-                                          (AUPNKLFT == 1 & is.na(AUPNKRTE)) | ((AUHERLFT == 1 | is.na(AUHERLFT)) & is.na(AUHERRTE)) ~ as.numeric(NA),
-                                          TRUE ~ 0)) |>
+         injection_opioid_use = case_when(AUPNKRTE == 4 | AUPNKRTE == 5 | AUHERRTE == 4 | AUHERRTE == 5 ~ 1, #route of painkiller/heroin use: IV or non-IV injection 
+                                          (AUPNKLFT == 1 & is.na(AUPNKRTE)) | ((AUHERLFT == 1 | is.na(AUHERLFT)) & is.na(AUHERRTE)) ~ as.numeric(NA), # if lifetime painkiller/heroin use (or unknown status) but route unknown, then missing
+                                          TRUE ~ 0)) |> # if no lifetime painkiller/heroin use then none
   select(PATID, age_first_opioid_use, injection_opioid_use)
 
 process_column <- function(text) {
@@ -242,15 +244,6 @@ unique_values_vector <- process_column(ASU$AUPNKLSP)
 
 # non-opioid pain killers - ativan, tylenol, valium -- people with these had opioids prescribed anyways
 
-Mode <- function(x, na.rm = TRUE) {
-  if(na.rm){
-    x = x[!is.na(x)]
-  }
-  
-  ux <- unique(x)
-  return(ux[which.max(tabulate(match(x, ux)))])
-}
-
 # joining data and imputing missing values
 dat <- dat |>
   left_join(DEM) |>
@@ -259,37 +252,10 @@ dat <- dat |>
   left_join(ASU) |>
   mutate(DESEX = ifelse(DESEX == 2, 1, 0),
          years_since_first_opioid_use = case_when(is.na(age_first_opioid_use) == FALSE ~ age - age_first_opioid_use,
-                                                  TRUE ~ as.numeric(NA)))
-dat <- dat |>  
-  ungroup() |>
-mutate(DEBLACK = ifelse(is.na(DEBLACK), Mode(DEBLACK), DEBLACK),
-       DEWHITE = ifelse(is.na(DEWHITE), Mode(DEWHITE), DEWHITE),
-       DEAMEIND = ifelse(is.na(DEAMEIND), Mode(DEAMEIND), DEAMEIND),
-       DEAAPI = ifelse(is.na(DEAAPI), Mode(DEAAPI), DEAAPI),
-       is_hispanic_missing = ifelse(is.na(is_hispanic), 1, 0),
-       is_hispanic = ifelse(is_hispanic_missing == 1, Mode(is_hispanic), is_hispanic),
-       alcohol_use_disorder_missing = ifelse(is.na(alcohol_use_disorder), 1, 0),
-       alcohol_use_disorder = ifelse(alcohol_use_disorder_missing == 1, Mode(alcohol_use_disorder), alcohol_use_disorder),
-       amphetamine_use_disorder_missing = ifelse(is.na(amphetamine_use_disorder), 1, 0),
-       amphetamine_use_disorder = ifelse(amphetamine_use_disorder_missing == 1, Mode(amphetamine_use_disorder), amphetamine_use_disorder),
-       cannabis_use_disorder_missing = ifelse(is.na(cannabis_use_disorder), 1, 0),
-       cannabis_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(cannabis_use_disorder), cannabis_use_disorder),
-       cocaine_use_disorder_missing = ifelse(is.na(cocaine_use_disorder), 1, 0),
-       cocaine_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(cocaine_use_disorder), cocaine_use_disorder),
-       sedative_use_disorder_missing = ifelse(is.na(sedative_use_disorder), 1, 0),
-       sedative_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(sedative_use_disorder), sedative_use_disorder),
-       anxiety_missing = ifelse(is.na(anxiety), 1, 0),
-       anxiety = ifelse(anxiety_missing == 1, Mode(anxiety), anxiety),
-       bipolar_missing = ifelse(is.na(bipolar), 1, 0),
-       bipolar = ifelse(bipolar_missing == 1, Mode(bipolar), bipolar),
-       depression_missing = ifelse(is.na(depression), 1, 0),
-       depression = ifelse(depression_missing == 1, Mode(depression), depression),
-       years_since_first_opioid_use_missing = ifelse(is.na(years_since_first_opioid_use), 1, 0),
-       years_since_first_opioid_use = ifelse(years_since_first_opioid_use_missing == 1, median(years_since_first_opioid_use, na.rm = TRUE), years_since_first_opioid_use),
-       injection_opioid_use_missing = ifelse(is.na(injection_opioid_use), 1, 0),
-       injection_opioid_use = ifelse(injection_opioid_use_missing == 1, Mode(injection_opioid_use), injection_opioid_use)) |>
-select(-age_first_opioid_use,
-       -starts_with("max_cows_time"))
+                                                  TRUE ~ as.numeric(NA))) |>
+  select(-age_first_opioid_use,
+         -starts_with("max_cows_time")) |>
+  ungroup()
 
 dat_demographics <- dat |>
   select(PATID, PROTSEG, received_naltrexone_injection, days_from_admission_to_consent, age:last_col())
@@ -361,5 +327,45 @@ dat <- dat |>
          L2_5 = ifelse(C_4 == 0, NA, L2_5),
          L3_5 = ifelse(C_4 == 0, NA, L3_5)
          )
+
+# imputing values with mode/median
+
+Mode <- function(x, na.rm = TRUE) {
+  if(na.rm){
+    x = x[!is.na(x)]
+  }
+  
+  ux <- unique(x)
+  return(ux[which.max(tabulate(match(x, ux)))])
+}
+
+saveRDS(dat, here::here("data/analysis_data/pre_imputed_analysis_data.rds"))
+
+dat <- dat |>  
+  mutate(DEBLACK = ifelse(is.na(DEBLACK), Mode(DEBLACK), DEBLACK),
+         DEWHITE = ifelse(is.na(DEWHITE), Mode(DEWHITE), DEWHITE),
+         DEOTHER = ifelse(is.na(DEOTHER), Mode(DEOTHER), DEOTHER),
+         is_hispanic_missing = ifelse(is.na(is_hispanic), 1, 0),
+         is_hispanic = ifelse(is_hispanic_missing == 1, Mode(is_hispanic), is_hispanic),
+         alcohol_use_disorder_missing = ifelse(is.na(alcohol_use_disorder), 1, 0),
+         alcohol_use_disorder = ifelse(alcohol_use_disorder_missing == 1, Mode(alcohol_use_disorder), alcohol_use_disorder),
+         amphetamine_use_disorder_missing = ifelse(is.na(amphetamine_use_disorder), 1, 0),
+         amphetamine_use_disorder = ifelse(amphetamine_use_disorder_missing == 1, Mode(amphetamine_use_disorder), amphetamine_use_disorder),
+         cannabis_use_disorder_missing = ifelse(is.na(cannabis_use_disorder), 1, 0),
+         cannabis_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(cannabis_use_disorder), cannabis_use_disorder),
+         cocaine_use_disorder_missing = ifelse(is.na(cocaine_use_disorder), 1, 0),
+         cocaine_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(cocaine_use_disorder), cocaine_use_disorder),
+         sedative_use_disorder_missing = ifelse(is.na(sedative_use_disorder), 1, 0),
+         sedative_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(sedative_use_disorder), sedative_use_disorder),
+         anxiety_missing = ifelse(is.na(anxiety), 1, 0),
+         anxiety = ifelse(anxiety_missing == 1, Mode(anxiety), anxiety),
+         bipolar_missing = ifelse(is.na(bipolar), 1, 0),
+         bipolar = ifelse(bipolar_missing == 1, Mode(bipolar), bipolar),
+         depression_missing = ifelse(is.na(depression), 1, 0),
+         depression = ifelse(depression_missing == 1, Mode(depression), depression),
+         years_since_first_opioid_use_missing = ifelse(is.na(years_since_first_opioid_use), 1, 0),
+         years_since_first_opioid_use = ifelse(years_since_first_opioid_use_missing == 1, median(years_since_first_opioid_use, na.rm = TRUE), years_since_first_opioid_use),
+         injection_opioid_use_missing = ifelse(is.na(injection_opioid_use), 1, 0),
+         injection_opioid_use = ifelse(injection_opioid_use_missing == 1, Mode(injection_opioid_use), injection_opioid_use))
 
 saveRDS(dat, here::here("data/analysis_data/analysis_data.rds"))

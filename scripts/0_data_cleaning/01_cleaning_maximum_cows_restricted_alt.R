@@ -3,7 +3,7 @@
 library(tidyverse)
 library(lubridate)
 
-dat <- readRDS(here::here("data/analysis_data/ctn97_analysis_data_012825.rds")) |>
+dat <- readRDS(here::here("data/analysis_data/ctn97_analysis_data_final.rds")) |>
   filter(DMAMDDT >= consent_DMAMDDT) |> # filtering out to only after patient consented into study
   arrange(PATID, DMAMDDT) |>
   group_by(PATID) |>
