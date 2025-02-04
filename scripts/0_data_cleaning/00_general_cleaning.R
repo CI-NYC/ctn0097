@@ -62,12 +62,12 @@ COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
                   COYAWN, COANXITY, COGOOSKN), ~ coalesce(., 0))) |> # missing values = 0
   rowwise() |>
   mutate(cows_score = case_when(is.na(COCOWSCR) & is.na(COWSCRRT) == FALSE ~ COWSCRRT, # if missing COWS but retrospective available, use that
-                                # patient notes inidicating that these patients did not receive/finish COWS assessments at the visits
+                                # patient notes indicating that these patients did not receive/finish COWS assessments at the visits
                                 PATID == "02201009700118" & VISNO == "IN02" ~ as.numeric(NA),
                                 PATID == "02076009700045" & VISNO == "IN08" ~ as.numeric(NA),
                                 PATID == "02076009700335" & VISNO == "B00" ~ as.numeric(NA),
                                 TRUE ~ sum(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR, # some categories missing information but still taking sum (these were imputed with 0)
-                                             COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- sometimes doesn't match sum -- we will take sum for now
+                                             COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- sometimes doesn't match sum -- we will take sum for now (only 7 instances)
   )) |>
   left_join(enrollment, by = c("PATID" = "PATID")) |>
   rename("cows_time" = "COASMTM") |>

@@ -23,7 +23,8 @@ read_results <- function(day, shift, path){
 }
 
 
-for (p in c("results_final", "results_alt"))
+for (p in c("results_final", "results_alt"
+            ))
 {
 combined_results_df <- data.frame()
 
@@ -102,9 +103,9 @@ combined_vals_always_3 <- map_dfr(contrast_always_3, ~ {
 colnames(combined_vals_always_3) <- gsub("\\vals.", "", colnames(combined_vals_always_3))
 
 combined_results_df <- combined_results_df |>
-  mutate(shift = case_when(shift == "always" ~ "d3: always give adjuvant",
-                           shift == "3" ~ "d2: adjuvant for max COWS >= 3",
-                           shift == "5" ~ "d1: adjuvant for max COWS >= 5"
+  mutate(shift = case_when(shift == "always" ~ "d3: always give adjunctive if not clinically contraindicated",
+                           shift == "3" ~ "d2: adjunctive for max COWS >= 3 and if not clinically contraindicated",
+                           shift == "5" ~ "d1: adjunctive for max COWS >= 5 and if not clinically contraindicated"
                            ))
 
 results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = estimate, color = factor(shift), group = factor(shift), shape = factor(shift))) +
@@ -117,7 +118,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
   guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
   theme_minimal() + 
   theme(
-    legend.position =  c(0.85, 0.2),
+    legend.position =  c(0.75, 0.2),
     legend.key.height = unit(0.5, "lines"),
     legend.key.width = unit(0.5, "lines"),
     legend.background = element_rect(fill = "white", color = "black", size = 0.25), 
@@ -127,7 +128,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
 contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(day), y = estimate)) +
   geom_point(position = position_dodge(width = 0.2), color = "coral1", shape = 15) + 
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "coral1") + 
-  ylim(-0.05, 0.275) + 
+  ylim(-0.1, 0.275) + 
   labs(x = "Day", y = "Difference", title = "Contrast by Day (d3 vs. d1)") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_minimal() +
@@ -136,7 +137,7 @@ contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(d
 contrast_plot_always_3 <- ggplot(data = combined_vals_always_3, aes(x = factor(day), y = estimate)) +
   geom_point(position = position_dodge(width = 0.2), color = "dodgerblue4", shape = 17) + 
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "dodgerblue4") + 
-  ylim(-0.05, 0.275) + 
+  ylim(-0.1, 0.275) + 
   labs(x = "Day", y = "Difference", title = "Contrast by Day (d3 vs. d2)") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_minimal() +
@@ -156,9 +157,9 @@ combined_results_df <- combined_results_df |>
   arrange(day, shift)
 
 contrast_df <- combined_vals_always_3 |>
-  mutate(shift = "d2: adjuvant for max COWS >= 3") |>
+  mutate(shift = "d2: adjunctive for max COWS >= 3 and if not clinically contraindicated") |>
   merge(combined_vals_always_5 |>
-  mutate(shift = "d1: adjuvant for max COWS >= 5"), all = TRUE) 
+  mutate(shift = "d1: adjunctive for max COWS >= 5 and if not clinically contraindicated"), all = TRUE) 
 
 saveRDS(combined_results_df, here::here(paste0(p, "/combined_results_df_", p, ".rds")))
 saveRDS(contrast_df, here::here(paste0(p, "/contrast_results_df_", p, ".rds")))

@@ -97,11 +97,11 @@ dat_shifted_3 <- dat |>
                         , 1, 0))
 
 dat_shifted_always <- dat  |>
-  mutate(adj_1 = 1,
-         adj_2 = ifelse(C_1 == 0, 1, NA),
-         adj_3 = ifelse(C_2 == 0, 1, NA),
-         adj_4 = ifelse(C_3 == 0, 1, NA),
-         adj_5 = ifelse(C_4 == 0, 1, NA))
+  mutate(adj_1 = ifelse(max_cows_eligible_1 == 1, 1, 0),
+         adj_2 = ifelse(max_cows_eligible_2 == 1, 1, 0),
+         adj_3 = ifelse(max_cows_eligible_3 == 1, 1, 0),
+         adj_4 = ifelse(max_cows_eligible_4 == 1, 1, 0),
+         adj_5 = ifelse(max_cows_eligible_5 == 1, 1, 0))
 
 learners <- list("mean", "glm", 
                  "earth",
@@ -147,7 +147,7 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
 
 set.seed(9)
 
-for (i in 5:5)
+for (i in 14:5)
   {
     
     # set.seed(11)
