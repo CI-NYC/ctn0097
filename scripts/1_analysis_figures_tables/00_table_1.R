@@ -66,7 +66,7 @@ L <- list(c("max_cows_1",
 )
 
 table1 <- dat |>
-  select(W, unlist(L), unlist(A), starts_with("C"), starts_with("Y")) |>
+  select(W, unlist(L), unlist(A), "C_14", "Y_14") |>
   tbl_summary(
     statistic = list(all_continuous() ~ "{median} ({p25}, {p75})",
                      all_categorical() ~ "{n} ({p}%)"),
@@ -80,6 +80,30 @@ latex_table <- table1 |>
   as_kable(format = "latex")
 
 cat(latex_table)
+
+# getting missing counts for ineligibility
+
+dat_long <- readRDS(here::here("data/analysis_data/max_cows_data.rds")) |>
+  select(PATID, day_post_consent, DMDROWSY, DMDIZZY, both_inelig) |>
+  filter(day_post_consent <= 5)
+
+# counting ineligible (severely drowsy, dizzy, OR ineligible due to dose)
+dat_long_ineligible <- dat_long |>
+  filter(DMDROWSY == 3 | DMDIZZY == 3 | both_inelig == 1)
+
+dat_long_ineligible |> group_by(day_post_consent) |> summarize(count = n())
+
+# counting eligible (not severely drowsy, dizzy, NOR ineligible due to dose) -- if any of these are missing, then considered missing variable
+dat_long_eligible <- dat_long |>
+  filter(DMDROWSY %in% c(0, 1, 2, 3) & DMDIZZY %in% c(0, 1, 2, 3) & both_inelig == 0)
+
+dat_long_eligible |> group_by(day_post_consent) |> summarize(count = n())
+
+
+
+
+
+
 
 
 

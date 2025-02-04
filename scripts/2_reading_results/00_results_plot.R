@@ -18,11 +18,13 @@ isotonic_projection <- function(x, alpha = 0.05) {
   x
 }
 
-read_results <- function(day, shift){
-  data <- readRDS(here::here(paste0("results_alt/results_shift_", shift, "_day_", day, "_1", ".rds")))
+read_results <- function(day, shift, path){
+  data <- readRDS(here::here(paste0(path, "/results_shift_", shift, "_day_", day, ".rds")))
 }
 
 
+for (p in c("results_final", "results_alt"))
+{
 combined_results_df <- data.frame()
 
 both_results <- list()
@@ -31,7 +33,7 @@ for (i in c("always", 5, 3))
   results <- list()
   for (j in 5:14)
   {
-    results[[j - 4]] <- read_results(j, i) 
+    results[[j - 4]] <- read_results(j, i, p) 
   }
   
   both_results[[i]] <- isotonic_projection(results) 
@@ -99,15 +101,23 @@ combined_vals_always_3 <- map_dfr(contrast_always_3, ~ {
 
 colnames(combined_vals_always_3) <- gsub("\\vals.", "", colnames(combined_vals_always_3))
 
-results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = estimate, color = factor(shift), group = factor(shift))) +
+combined_results_df <- combined_results_df |>
+  mutate(shift = case_when(shift == "always" ~ "d3: always give adjuvant",
+                           shift == "3" ~ "d2: adjuvant for max COWS >= 3",
+                           shift == "5" ~ "d1: adjuvant for max COWS >= 5"
+                           ))
+
+results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = estimate, color = factor(shift), group = factor(shift), shape = factor(shift))) +
   geom_point(position = position_dodge(width = 0.5)) + 
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.5)) + 
-  ylim(0, 0.7) +
-  labs(x = "Day", y = "Incidence", title = "XR-NTX Initiation Incidence by Day") +
-  labs(color = "Regime") + 
+  scale_shape_manual(values = c(15, 17, 1)) +
+  scale_color_manual(values = c("coral1", "dodgerblue4", "chartreuse3")) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.5)) +
+  ylim(0, 0.6) +
+  labs(x = "Day", y = "Cumulative Incidence", title = "Cumulative XR-NTX Initiation Incidence by Day") +
+  guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
   theme_minimal() + 
   theme(
-    legend.position =  c(0.85, 0.15),
+    legend.position =  c(0.85, 0.2),
     legend.key.height = unit(0.5, "lines"),
     legend.key.width = unit(0.5, "lines"),
     legend.background = element_rect(fill = "white", color = "black", size = 0.25), 
@@ -115,26 +125,44 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
   )
 
 contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(day), y = estimate)) +
-  geom_point(position = position_dodge(width = 0.2)) + 
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2)) + 
-   ylim(-0.2, 0.3) + 
-  labs(x = "Day", y = "Difference", title = "Contrast by Day (Always vs. 5)") +
+  geom_point(position = position_dodge(width = 0.2), color = "coral1", shape = 15) + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "coral1") + 
+  ylim(-0.05, 0.275) + 
+  labs(x = "Day", y = "Difference", title = "Contrast by Day (d3 vs. d1)") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "none")
 
 contrast_plot_always_3 <- ggplot(data = combined_vals_always_3, aes(x = factor(day), y = estimate)) +
-  geom_point(position = position_dodge(width = 0.2)) +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2)) + 
-  ylim(-0.2, 0.3) + 
-  labs(x = "Day", y = "Difference", title = "Contrast by Day (Always vs. 3)") +
+  geom_point(position = position_dodge(width = 0.2), color = "dodgerblue4", shape = 17) + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "dodgerblue4") + 
+  ylim(-0.05, 0.275) + 
+  labs(x = "Day", y = "Difference", title = "Contrast by Day (d3 vs. d2)") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "none")
 
 
-ggarrange(results_plot, 
+final_plot <- ggarrange(results_plot, 
           ggarrange(contrast_plot_always_5, contrast_plot_always_3, ncol = 2), 
           nrow = 2)
 
+ggsave(filename = here::here(paste0(p, "/figure_", p, ".pdf")), 
+       final_plot,
+       width = 9,
+       height = 6)
+
+combined_results_df <- combined_results_df |>
+  arrange(day, shift)
+
+contrast_df <- combined_vals_always_3 |>
+  mutate(shift = "d2: adjuvant for max COWS >= 3") |>
+  merge(combined_vals_always_5 |>
+  mutate(shift = "d1: adjuvant for max COWS >= 5"), all = TRUE) 
+
+saveRDS(combined_results_df, here::here(paste0(p, "/combined_results_df_", p, ".rds")))
+saveRDS(contrast_df, here::here(paste0(p, "/contrast_results_df_", p, ".rds")))
+}
 
 
 

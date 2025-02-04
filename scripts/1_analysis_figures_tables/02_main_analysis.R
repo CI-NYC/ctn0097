@@ -90,6 +90,8 @@ dat_shifted_5 <- dat |>
            adj_5 = ifelse(max_cows_5 >= 5 & max_cows_eligible_5 == 1 & max_cows_missing_indicator_5 == 0
                           , 1, 0))
 
+#saveRDS(dat_shifted_5, here::here("data/analysis_data/analysis_data_shifted_5.rds"))
+
 dat_shifted_3 <- dat |>
     mutate(adj_1 = ifelse(max_cows_1 >= 3 & max_cows_eligible_1 == 1 & max_cows_missing_indicator_1 == 0
                           , 1, 0),
@@ -101,6 +103,8 @@ dat_shifted_3 <- dat |>
                           , 1, 0),
            adj_5 = ifelse(max_cows_5 >= 3 & max_cows_eligible_5 == 1 & max_cows_missing_indicator_5 == 0
                           , 1, 0))
+
+#saveRDS(dat_shifted_3, here::here("data/analysis_data/analysis_data_shifted_3.rds"))
 
 dat_shifted_always <- dat  |>
     mutate(adj_1 = 1,
@@ -174,23 +178,23 @@ for (i in 14:5)
     )
 
     saveRDS(results_shift_5, here::here(paste0("results_final/results_shift_5_day_", i, ".rds")))
-# 
-#     set.seed(9)
-#     results_shift_3 <- run_lmtp(data = dat,
-#                                 day = i,
-#                                 shift = dat_shifted_3,
-#                                 learners = learners,
-#                                 folds = 20
-#     )
-# 
-#     saveRDS(results_shift_3, here::here(paste0("results_final/results_shift_3_day_", i, ".rds")))
 
-    # set.seed(9)
-    # results_shift_always <- run_lmtp(data = dat,
-    #                             day = i,
-    #                             shift = dat_shifted_always,
-    #                             learners = learners,
-    #                             folds = 20
-    # )
-    # saveRDS(results_shift_always, here::here(paste0("results_final/results_shift_always_day_", i,".rds")))
+    set.seed(9)
+    results_shift_3 <- run_lmtp(data = dat,
+                                day = i,
+                                shift = dat_shifted_3,
+                                learners = learners,
+                                folds = 20
+    )
+
+    saveRDS(results_shift_3, here::here(paste0("results_final/results_shift_3_day_", i, ".rds")))
+
+    set.seed(9)
+    results_shift_always <- run_lmtp(data = dat,
+                                day = i,
+                                shift = dat_shifted_always,
+                                learners = learners,
+                                folds = 20
+    )
+    saveRDS(results_shift_always, here::here(paste0("results_final/results_shift_always_day_", i,".rds")))
   }

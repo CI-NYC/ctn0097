@@ -147,7 +147,7 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
 
 set.seed(9)
 
-for (i in 14:5)
+for (i in 5:5)
   {
     
     # set.seed(11)
@@ -160,25 +160,25 @@ for (i in 14:5)
     # 
     # saveRDS(results_shift_obs, here::here(paste0("results_alt/results_obs_day_", i, ".rds")))
 
-# set.seed(9)
-# results_shift_5 <- run_lmtp(data = dat,
-#                             day = i,
-#                             shift = dat_shifted_5,
-#                             learners = learners,
-#                             folds = 20
-# )
-# 
-# saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i, ".rds")))
+set.seed(9)
+results_shift_5 <- run_lmtp(data = dat,
+                            day = i,
+                            shift = dat_shifted_5,
+                            learners = learners,
+                            folds = 20
+)
 
-    # set.seed(9)
-    # results_shift_3 <- run_lmtp(data = dat,
-    #                             day = i,
-    #                             shift = dat_shifted_3,
-    #                             learners = learners,
-    #                             folds = 20
-    # )
-    # 
-    # saveRDS(results_shift_3, here::here(paste0("results_alt/results_shift_3_day_", i, ".rds")))
+saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i, ".rds")))
+
+    set.seed(9)
+    results_shift_3 <- run_lmtp(data = dat,
+                                day = i,
+                                shift = dat_shifted_3,
+                                learners = learners,
+                                folds = 20
+    )
+
+    saveRDS(results_shift_3, here::here(paste0("results_alt/results_shift_3_day_", i, ".rds")))
 
     set.seed(9)
     results_shift_always <- run_lmtp(data = dat,
