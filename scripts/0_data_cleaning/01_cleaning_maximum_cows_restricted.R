@@ -198,7 +198,7 @@ max_cows_long_with_eligibility <- all_max_cows_long |>
   group_by(PATID, day_post_consent) |>
   arrange(PATID, day_post_consent, either_inelig, time_index) |>
   filter(either_inelig == 0 | !any(either_inelig == 0)) |> #taking the first maximum eligible COWS (if available) or the first non-eligible COWS (if no eligible are available)
-  slice(1) |>
+  dplyr::slice(1) |>
   ungroup() |>
   select(PATID, day_post_consent, max_cows, cows_time, time_index, either_inelig, both_inelig, clonazepam_inelig, clonidine_inelig) |>
   rename("max_cows_time" = "cows_time")
