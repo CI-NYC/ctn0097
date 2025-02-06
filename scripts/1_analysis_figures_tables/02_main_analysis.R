@@ -57,11 +57,11 @@ A <- list(c("adj_1"),
 
 
 L <- list(c("max_cows_1", 
-            "max_cows_eligible_1", 
+            #"max_cows_eligible_1", # always 1
             "max_cows_missing_indicator_1",
             "L3_1"), #benzo
           c("max_cows_2", 
-            "max_cows_eligible_2", 
+            #"max_cows_eligible_2", # always 1
             "max_cows_missing_indicator_2",
             "L3_2"), #benzo
           c("max_cows_3", 
@@ -131,11 +131,17 @@ learners <- list("mean", "glm",
                  list("xgboost",
                       min_child_weight = 5,
                       id = "xgboost1"),
+                 list("xgboost",
+                      min_child_weight = 10,
+                      id = "xgboost1"),
                  "ranger",
                  list("ranger",
                       num.trees = 1000,
+                      id = "ranger1"),
+                 list("ranger",
+                      num.trees = 1500,
                       id = "ranger1")
-                 )
+)
 
 # function for running lmtp
 run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 20)
@@ -158,8 +164,8 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
     learners_outcome = learners,
     learners_trt = learners,
     folds = folds, 
-    control = lmtp_control(.learners_outcome_folds = 10,
-                           .learners_trt_folds = 10,
+    control = lmtp_control(.learners_outcome_folds = 20,
+                           .learners_trt_folds = 20,
                            .trim = 0.95), # look at trim
     mtp = FALSE,
     id = NULL)
@@ -179,7 +185,7 @@ for (i in 14:5)
     #                             folds = 20
     # )
     # 
-    # saveRDS(results_shift_obs, here::here(paste0("v/results_obs_day_", i, ".rds")))
+    # saveRDS(results_shift_obs, here::here(paste0("results_final/results_obs_day_", i, ".rds")))
     
   # set.seed(9)
   # results_shift_8 <- run_lmtp(data = dat,

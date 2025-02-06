@@ -18,8 +18,8 @@ dat_long <- readRDS(here::here("data/analysis_data/max_cows_data_alt.rds")) |>
                         TRUE ~ 0),
          L1 = case_when(DMBUPDTL > 0 ~ 1, # any bup
                         TRUE ~ 0), 
-         L2 = ifelse(DMDROWSY == 3 | DMDIZZY == 3, 1, 0)) |> # severely dizzy or drowsy
-  mutate(both_inelig = rowSums(cbind(both_inelig, L2), na.rm = TRUE)) |>
+         L2 = ifelse(DMDROWSY == 3 | DMDIZZY == 3, 1, 0)) |> # severely dizzy or drowsy (not using)
+  #mutate(both_inelig = rowSums(cbind(both_inelig, L2), na.rm = TRUE)) |>
   filter(day_post_consent <= 14) |>
   mutate_at(vars(starts_with("L")), ~ if_else(is.na(.), 0, .)) |>
   rename("max_cows_ineligible" = "both_inelig") |>

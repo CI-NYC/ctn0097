@@ -93,30 +93,30 @@ dat_long <- readRDS(here::here("data/analysis_data/max_cows_data.rds")) |>
   filter(day_post_consent <= 5)
 
 # counting ineligible (severely drowsy, dizzy, OR ineligible due to dose)
-dat_long_ineligible <- dat_long |>
-  filter(DMDROWSY == 3 | DMDIZZY == 3 | both_inelig == 1)
-
-inelig_tbl <- dat_long_ineligible |> group_by(day_post_consent) |> summarize(count_inelig = n())
-
-# counting eligible (not severely drowsy, dizzy, NOR ineligible due to dose) -- if any of these are missing, then considered missing variable
-dat_long_eligible <- dat_long |>
-  filter(DMDROWSY %in% c(0, 1, 2, 3) & DMDIZZY %in% c(0, 1, 2, 3) & both_inelig == 0)
-
-elig_tbl <- dat_long_eligible |> group_by(day_post_consent) |> summarize(count_elig = n())
-
-tbl <- elig_tbl |>
-  left_join(inelig_tbl) |>
-  mutate(sum_not_missing = rowSums(cbind(count_elig, count_inelig))) |>
-  mutate(n = case_when(day_post_consent == 1 ~ 415,
-                       day_post_consent == 2 ~ 415 - 7,
-                       day_post_consent == 3 ~ 415 - 37,
-                       day_post_consent == 4 ~ 415 - 74,
-                       day_post_consent == 5 ~ 415 - 144
-                       )) |>
-  mutate(missing = n - sum_not_missing,
-         perc_eligible = count_elig/sum_not_missing)
-
-tbl
+# dat_long_ineligible <- dat_long |>
+#   filter(DMDROWSY == 3 | DMDIZZY == 3 | both_inelig == 1)
+# 
+# inelig_tbl <- dat_long_ineligible |> group_by(day_post_consent) |> summarize(count_inelig = n())
+# 
+# # counting eligible (not severely drowsy, dizzy, NOR ineligible due to dose) -- if any of these are missing, then considered missing variable
+# dat_long_eligible <- dat_long |>
+#   filter(DMDROWSY %in% c(0, 1, 2, 3) & DMDIZZY %in% c(0, 1, 2, 3) & both_inelig == 0)
+# 
+# elig_tbl <- dat_long_eligible |> group_by(day_post_consent) |> summarize(count_elig = n())
+# 
+# tbl <- elig_tbl |>
+#   left_join(inelig_tbl) |>
+#   mutate(sum_not_missing = rowSums(cbind(count_elig, count_inelig))) |>
+#   mutate(n = case_when(day_post_consent == 1 ~ 415,
+#                        day_post_consent == 2 ~ 415 - 7,
+#                        day_post_consent == 3 ~ 415 - 37,
+#                        day_post_consent == 4 ~ 415 - 74,
+#                        day_post_consent == 5 ~ 415 - 144
+#                        )) |>
+#   mutate(missing = n - sum_not_missing,
+#          perc_eligible = count_elig/sum_not_missing)
+# 
+# tbl
 
 
 

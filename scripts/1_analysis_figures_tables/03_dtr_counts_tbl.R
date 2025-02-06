@@ -1,15 +1,15 @@
 library(tidyverse)
 
 dat <- readRDS(here::here("data/analysis_data/analysis_data.rds")) |>
-  mutate(follows_dtr_8_day_1 = ifelse(max_cows_1 >= 7 & max_cows_eligible_1 == 1 & max_cows_missing_indicator_1 == 0 & adj_1 == 1
+  mutate(follows_dtr_8_day_1 = ifelse(max_cows_1 >= 8 & max_cows_eligible_1 == 1 & max_cows_missing_indicator_1 == 0 & adj_1 == 1
                                       , 1, 0),
-         follows_dtr_8_day_2 = ifelse(max_cows_2 >= 7 & max_cows_eligible_2 == 1 & max_cows_missing_indicator_2 == 0 & adj_2 == 1
+         follows_dtr_8_day_2 = ifelse(max_cows_2 >= 8 & max_cows_eligible_2 == 1 & max_cows_missing_indicator_2 == 0 & adj_2 == 1
                                       , 1, 0),
-         follows_dtr_8_day_3 = ifelse(max_cows_3 >= 7 & max_cows_eligible_3 == 1 & max_cows_missing_indicator_3 == 0 & adj_3 == 1
+         follows_dtr_8_day_3 = ifelse(max_cows_3 >= 8 & max_cows_eligible_3 == 1 & max_cows_missing_indicator_3 == 0 & adj_3 == 1
                                       , 1, 0),
-         follows_dtr_8_day_4 = ifelse(max_cows_4 >= 7 & max_cows_eligible_4 == 1 & max_cows_missing_indicator_4 == 0 & adj_4 == 1
+         follows_dtr_8_day_4 = ifelse(max_cows_4 >= 8 & max_cows_eligible_4 == 1 & max_cows_missing_indicator_4 == 0 & adj_4 == 1
                                       , 1, 0),
-         follows_dtr_8_day_5 = ifelse(max_cows_5 >= 7 & max_cows_eligible_5 == 1 & max_cows_missing_indicator_5 == 0 & adj_5 == 1
+         follows_dtr_8_day_5 = ifelse(max_cows_5 >= 8 & max_cows_eligible_5 == 1 & max_cows_missing_indicator_5 == 0 & adj_5 == 1
                                       , 1, 0),
          follows_dtr_5_day_1 = ifelse(max_cows_1 >= 5 & max_cows_eligible_1 == 1 & max_cows_missing_indicator_1 == 0 & adj_1 == 1
                         , 1, 0),
@@ -31,15 +31,15 @@ dat <- readRDS(here::here("data/analysis_data/analysis_data.rds")) |>
                         , 1, 0),
          follows_dtr_3_day_5 = ifelse(max_cows_5 >= 3 & max_cows_eligible_5 == 1 & max_cows_missing_indicator_5 == 0 & adj_5 == 1
                         , 1, 0),
-         follows_dtr_always_day_1 = ifelse(max_cows_missing_indicator_1 == 0
+         follows_dtr_always_day_1 = ifelse(max_cows_eligible_1 == 1 & adj_1 == 1
                                       , 1, 0),
-         follows_dtr_always_day_2 = ifelse(max_cows_missing_indicator_2 == 0
+         follows_dtr_always_day_2 = ifelse(max_cows_eligible_2 == 1 & adj_2 == 1
                                       , 1, 0),
-         follows_dtr_always_day_3 = ifelse(max_cows_missing_indicator_3 == 0
+         follows_dtr_always_day_3 = ifelse(max_cows_eligible_3 == 1 & adj_3 == 1
                                       , 1, 0),
-         follows_dtr_always_day_4 = ifelse(max_cows_missing_indicator_4 == 0
+         follows_dtr_always_day_4 = ifelse(max_cows_eligible_4 == 1 & adj_4 == 1
                                       , 1, 0),
-         follows_dtr_always_day_5 = ifelse(max_cows_missing_indicator_5 == 0
+         follows_dtr_always_day_5 = ifelse(max_cows_eligible_5 == 1 & adj_5 == 1
                                       , 1, 0))
 
 day_1 <- dat |>
@@ -128,9 +128,8 @@ day_5 <- dat |>
               rename("follows_dtr" = "follows_dtr_always_day_5")) |>
   left_join(dat |>
               group_by(follows_dtr_8_day_5) |>
-              summarize(count_8 = n()) |>
-              rename("follows_dtr" = "follows_dtr_8_day_5")) |>
-  mutate(day = 5)
+              summarize(count_always = n()) |>
+              rename("follows_dtr" = "follows_dtr_8_day_5"))
 
 dtr_counts <- day_1 |>
   merge(day_2, all = TRUE) |>
@@ -140,7 +139,7 @@ dtr_counts <- day_1 |>
   arrange(day) |>
   relocate(day, .before = follows_dtr) |>
   filter(follows_dtr == 1) |>
-  select(-follows_dtr) |>
+  select(-c(follows_dtr, count_8)) |>
   relocate(count_3, .after = count_5)
 
 dtr_counts

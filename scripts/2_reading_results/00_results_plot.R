@@ -23,7 +23,7 @@ read_results <- function(day, shift, path){
 }
 
 
-for (p in c("results_final", "results_alt"
+for (p in c("results_final"#, "results_alt"
             ))
 {
 combined_results_df <- data.frame()
@@ -114,7 +114,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
   scale_color_manual(values = c("coral1", "dodgerblue4", "chartreuse3")) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.5)) +
   ylim(0, 0.6) +
-  labs(x = "Day", y = "Cumulative Incidence", title = "Cumulative XR-NTX Initiation Incidence by Day") +
+  labs(x = "Day", y = "Probability", title = "Cumulative XR-NTX Initiation Probability by Day") +
   guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
   theme_minimal() + 
   theme(
