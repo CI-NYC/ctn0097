@@ -36,9 +36,9 @@ W <- c("days_from_admission_to_consent",
   "sedative_use_disorder", #missing
   #"sedative_use_disorder_missing",
   "injection_opioid_use",
-  #"injection_opioid_use_missing",
+  "injection_opioid_use_missing",
   "years_since_first_opioid_use",
-  #"years_since_first_opioid_use_missing",
+  "years_since_first_opioid_use_missing",
   # mental health
   "anxiety", #missing
   #"anxiety_missing",
@@ -110,16 +110,17 @@ learners <- list("mean", "glm",
                       min_child_weight = 5,
                       id = "xgboost1"),
                  list("xgboost",
-                      min_child_weight = 10,
-                      id = "xgboost1"),
+                      lambda = 5,
+                      id = "xgboost2"),
                  "ranger",
                  list("ranger",
                       num.trees = 1000,
-                    id = "ranger1"),
+                      id = "ranger1"),
                  list("ranger",
                       num.trees = 1500,
-                      id = "ranger1")
+                      id = "ranger2")
 )
+
 
 # function for running lmtp
 run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 20)
@@ -142,8 +143,8 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
     learners_outcome = learners,
     learners_trt = learners,
     folds = folds, 
-    control = lmtp_control(.learners_outcome_folds = 20,
-                           .learners_trt_folds = 20,
+    control = lmtp_control(.learners_outcome_folds = 10,
+                           .learners_trt_folds = 10,
                            .trim = 0.95), # look at trim
     mtp = FALSE,
     id = NULL)
@@ -153,7 +154,7 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
 
 set.seed(9)
 
-for (i in 14:5)
+for (i in 5:14)
   {
     
     # set.seed(11)
@@ -166,15 +167,15 @@ for (i in 14:5)
     # 
     # saveRDS(results_shift_obs, here::here(paste0("results_alt/results_obs_day_", i, ".rds")))
 
-set.seed(9)
-results_shift_5 <- run_lmtp(data = dat,
-                            day = i,
-                            shift = dat_shifted_5,
-                            learners = learners,
-                            folds = 20
-)
-
-saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i, ".rds")))
+    set.seed(9)
+    results_shift_5 <- run_lmtp(data = dat,
+                                day = i,
+                                shift = dat_shifted_5,
+                                learners = learners,
+                                folds = 20
+    )
+    
+    saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i, ".rds")))
 
     set.seed(9)
     results_shift_3 <- run_lmtp(data = dat,

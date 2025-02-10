@@ -23,7 +23,7 @@ read_results <- function(day, shift, path){
 }
 
 
-for (p in c("results_final"#, "results_alt"
+for (p in c("results_final", "results_alt"
             ))
 {
 combined_results_df <- data.frame()
@@ -118,7 +118,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
   guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
   theme_minimal() + 
   theme(
-    legend.position =  c(0.75, 0.2),
+    legend.position =  c(0.75, 0.15),
     legend.key.height = unit(0.5, "lines"),
     legend.key.width = unit(0.5, "lines"),
     legend.background = element_rect(fill = "white", color = "black", size = 0.25), 
@@ -128,7 +128,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
 contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(day), y = estimate)) +
   geom_point(position = position_dodge(width = 0.2), color = "coral1", shape = 15) + 
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "coral1") + 
-  ylim(-0.1, 0.275) + 
+  ylim(-0.1, 0.35) + 
   labs(x = "Day", y = "Difference", title = "Contrast by Day (d3 vs. d1)") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_minimal() +
@@ -137,7 +137,7 @@ contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(d
 contrast_plot_always_3 <- ggplot(data = combined_vals_always_3, aes(x = factor(day), y = estimate)) +
   geom_point(position = position_dodge(width = 0.2), color = "dodgerblue4", shape = 17) + 
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "dodgerblue4") + 
-  ylim(-0.1, 0.275) + 
+  ylim(-0.1, 0.35) + 
   labs(x = "Day", y = "Difference", title = "Contrast by Day (d3 vs. d2)") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_minimal() +
@@ -151,7 +151,7 @@ final_plot <- ggarrange(results_plot,
 ggsave(filename = here::here(paste0(p, "/figure_", p, ".pdf")), 
        final_plot,
        width = 9,
-       height = 6)
+       height = 9)
 
 combined_results_df <- combined_results_df |>
   arrange(day, shift)
