@@ -8,7 +8,13 @@ dat <- readRDS(here::here("data/analysis_data/pre_imputed_analysis_data.rds")) |
   #        max_cows_4 = ifelse(max_cows_missing_indicator_4 == 1, as.numeric(NA), max_cows_4),
   #        max_cows_5 = ifelse(max_cows_missing_indicator_5 == 1, as.numeric(NA), max_cows_5)
   #        ) |>
-  mutate(across(starts_with("C_"), ~ ifelse(. == 0, 1, ifelse(. == 1, 0, .))))
+  mutate(across(starts_with("C_"), ~ ifelse(. == 0, 1, ifelse(. == 1, 0, .)))) |>
+  mutate(max_cows_eligible_1 = ifelse(max_cows_missing_indicator_1 == 1, as.numeric(NA), max_cows_eligible_1),
+         max_cows_eligible_2 = ifelse(max_cows_missing_indicator_2 == 1, as.numeric(NA), max_cows_eligible_2),
+         max_cows_eligible_3 = ifelse(max_cows_missing_indicator_3 == 1, as.numeric(NA), max_cows_eligible_3),
+         max_cows_eligible_4 = ifelse(max_cows_missing_indicator_4 == 1, as.numeric(NA), max_cows_eligible_4),
+         max_cows_eligible_5 = ifelse(max_cows_missing_indicator_5 == 1, as.numeric(NA), max_cows_eligible_5)
+         )
 
 W <- c("days_from_admission_to_consent",
        # demographics

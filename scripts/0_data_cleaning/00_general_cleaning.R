@@ -112,6 +112,10 @@ full_data <- full_data |>
 
 # end of induction data
 EOI <- read.csv("data/EOI.csv", colClasses = c(PATID = "character")) |>
+  rowwise() |> 
+  mutate(EITERMDT = case_when(EINTXIND == 1 ~ EITERMDT, # if initiated XR-NTX, keep as is (NA)
+                              TRUE ~ min(EITERMDT, EOIASMDT, EILEFTDT, na.rm = TRUE))) |> # if did not initiated, use minimum of induction termination date, assessment date (1 patient who switched to buprenorphine before end of induction), or left unit date (2 people left before end of induction)
+  ungroup() |>
   select(PATID, EINTXIND, EOIINJDT, EOIINJTM, EITERMDT)
 
 full_data <- full_data |>
@@ -184,7 +188,7 @@ UDS <- read.csv("data/UDS.csv", colClasses = c(PATID = "character"), na.strings 
   filter(PATID != "02207009701249") # look at note -- patient who failed induction but returned one time for medication
 
 full_data <- full_data |>
-  full_join(UDS |> select(PATID, UDSASMDT, UDTEST1, ), by = c("PATID" = "PATID",
+  full_join(UDS |> select(PATID, UDSASMDT, UDTEST1), by = c("PATID" = "PATID",
                         "DMAMDDT" = "UDSASMDT")) |>
   mutate(UDTEST1 = ifelse(is.na(UDTEST1), 0, UDTEST1)) |>
   distinct()
