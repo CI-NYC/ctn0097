@@ -69,6 +69,7 @@ COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
                                 TRUE ~ sum(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR, # some categories missing information but still taking sum (these were imputed with 0)
                                              COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- sometimes doesn't match sum -- we will take sum for now (only 7 instances)
   )) |>
+  filter(!((PATID == "02201009700118" & COWASMDT == 0 & COASMTM == "02:57")) | COASMTM == "") |>
   left_join(enrollment, by = c("PATID" = "PATID")) |>
   rename("cows_time" = "COASMTM") |>
   filter(COWASMDT >= admission_date) |>
