@@ -203,7 +203,6 @@ max_cows_long_with_eligibility <- all_max_cows_long |>
   select(PATID, day_post_consent, max_cows, cows_time, time_index, either_inelig, both_inelig, clonazepam_inelig, clonidine_inelig) |>
   rename("max_cows_time" = "cows_time")
 
-
 # finding COWS time following maximum score
 dat <- dat |>
   left_join(max_cows_long_with_eligibility) |>
@@ -217,15 +216,15 @@ dat <- dat |>
                                     TRUE ~ hms::as_hms(NA))) 
 
 # getting dosing in long format (finding any dosing info occurring after max COWS but prior to next COWS)
-dat_bup_long <- dat |>
-  select(PATID, day_post_consent, starts_with("DMBUP"), -DMBUPDTL) |>
-  pivot_longer(
-    cols = starts_with("DMBUP"),  
-    names_to = c(".value", "pair"),   
-    names_pattern = "^(DMBUPD|DMBUPT)(\\d+)$" 
-  ) |>
-  filter(is.na(DMBUPD) == FALSE) |>
-  select(-pair)
+# dat_bup_long <- dat |>
+#   select(PATID, day_post_consent, starts_with("DMBUP"), -DMBUPDTL) |>
+#   pivot_longer(
+#     cols = starts_with("DMBUP"),  
+#     names_to = c(".value", "pair"),   
+#     names_pattern = "^(DMBUPD|DMBUPT)(\\d+)$" 
+#   ) |>
+#   filter(is.na(DMBUPD) == FALSE) |>
+#   select(-pair)
 
 dat_clonidine_long <- dat |>
   select(PATID, day_post_consent, starts_with("DMCLD"), -DMCLDDTL) |>
@@ -234,7 +233,7 @@ dat_clonidine_long <- dat |>
     names_to = c(".value", "pair"),   
     names_pattern = "^(DMCLDD|DMCLDT)(\\d+)$" 
   ) |>
-  filter(is.na(DMCLDD) == FALSE) |>
+  filter(is.na(DMCLDD) == FALSE, is.na(DMCLDT) == FALSE) |>
   select(-pair)
 
 dat_clonazepam_long <- dat |>
@@ -244,7 +243,7 @@ dat_clonazepam_long <- dat |>
     names_to = c(".value", "pair"),   
     names_pattern = "^(DMCZPD|DMCZPT)(\\d+)$" 
   ) |>
-  filter(is.na(DMCZPD) == FALSE) |>
+  filter(is.na(DMCZPD) == FALSE, is.na(DMCZPT) == FALSE) |>
   select(-pair)
 
 cows_info <- dat |>

@@ -23,7 +23,7 @@ read_results <- function(day, shift, path){
 }
 
 
-for (p in c("results_final", "results_alt"
+for (p in c("results_final", "results_alt", "results_final_shift"
             ))
 {
 combined_results_df <- data.frame()
@@ -114,7 +114,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
   scale_color_manual(values = c("coral1", "dodgerblue4", "chartreuse3")) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.5)) +
   ylim(0, 0.6) +
-  labs(x = "Day", y = "Probability", title = "Cumulative XR-NTX Initiation Probability by Day") +
+  labs(x = "Day", y = "Probability", title = "") +
   guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
   theme_minimal() + 
   theme(
@@ -122,33 +122,41 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
     legend.key.height = unit(0.5, "lines"),
     legend.key.width = unit(0.5, "lines"),
     legend.background = element_rect(fill = "white", color = "black", size = 0.25), 
-    legend.title = element_text(face = "bold") 
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5)
   )
 
 contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(day), y = estimate)) +
-  geom_point(position = position_dodge(width = 0.2), color = "coral1", shape = 15) + 
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "coral1") + 
+  geom_point(position = position_dodge(width = 0.2), color = "black") + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "black") + 
   ylim(-0.1, 0.35) + 
-  labs(x = "Day", y = "Difference", title = "Contrast by Day (d3 vs. d1)") +
+  labs(x = "Day", y = "Difference", title = "d3 vs. d1") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_minimal() +
   theme(legend.position = "none")
 
 contrast_plot_always_3 <- ggplot(data = combined_vals_always_3, aes(x = factor(day), y = estimate)) +
-  geom_point(position = position_dodge(width = 0.2), color = "dodgerblue4", shape = 17) + 
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "dodgerblue4") + 
+  geom_point(position = position_dodge(width = 0.2), color = "black") + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "black") + 
   ylim(-0.1, 0.35) + 
-  labs(x = "Day", y = "Difference", title = "Contrast by Day (d3 vs. d2)") +
+  labs(x = "Day", y = "Difference", title = "d3 vs. d2") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_minimal() +
   theme(legend.position = "none")
 
+results_plot <- ggarrange(results_plot, ncol = 1)
+
+results_plot <- annotate_figure(results_plot, top = text_grob("Cumulative XR-NTX Initiation Probability by Day", size = 14))
+
+contrast_plots <- ggarrange(contrast_plot_always_5, contrast_plot_always_3, ncol = 2)
+
+contrast_plots <- annotate_figure(contrast_plots, top = text_grob("Difference in Probability of XR-NTX Initiation by Day", size = 14))
 
 final_plot <- ggarrange(results_plot, 
-          ggarrange(contrast_plot_always_5, contrast_plot_always_3, ncol = 2), 
-          nrow = 2)
+                        contrast_plots,
+                        nrow = 2)
 
-ggsave(filename = here::here(paste0(p, "/figure_", p, ".pdf")), 
+ggsave(filename = here::here(paste0("figures/figure_", p, ".pdf")), 
        final_plot,
        width = 9,
        height = 9)

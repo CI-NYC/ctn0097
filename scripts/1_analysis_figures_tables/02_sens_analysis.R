@@ -145,7 +145,7 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
     folds = folds, 
     control = lmtp_control(.learners_outcome_folds = 10,
                            .learners_trt_folds = 10,
-                           .trim = 0.95), # look at trim
+                           .trim = 0.975), # look at trim
     mtp = FALSE,
     id = NULL)
   
@@ -176,7 +176,7 @@ for (i in 5:14)
     )
 
     saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i, ".rds")))
-
+ 
     set.seed(9)
     results_shift_3 <- run_lmtp(data = dat,
                                 day = i,

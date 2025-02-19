@@ -1,7 +1,7 @@
 library(tidyverse)
 library(knitr)
 
-for (p in c("results_final", "results_alt"))
+for (p in c("results_final", "results_alt", "results_final_shift"))
 {
 combined_results_df <- readRDS(here::here(paste0(p, "/combined_results_df_", p, ".rds"))) |>
   mutate(estimate = paste0(round(estimate, 4), " (", round(conf.low, 4), ", ", round(conf.high, 4), ")")) |>
