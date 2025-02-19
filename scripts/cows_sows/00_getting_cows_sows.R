@@ -1,7 +1,8 @@
 library(tidyverse)
 
+# COWS scores
 COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
-  filter(is.na(COASMTM) == FALSE) |>
+  filter(is.na(COASMTM) == FALSE) |> #if time is missing, remove
   mutate(across(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR,
                   COYAWN, COANXITY, COGOOSKN), ~ coalesce(., 0))) |> # missing values = 0
   rowwise() |>
@@ -13,13 +14,14 @@ COW <- read.csv("data/COW.csv", colClasses = c(PATID = "character")) |>
                                 TRUE ~ sum(c(COPULSE, COSWEAT, CORESTLS, COPUPIL, COBONJNT, CONOSEYE, COGIUPST, COTREMOR, # some categories missing information but still taking sum (these were imputed with 0)
                                              COYAWN, COANXITY, COGOOSKN)) # issues with COCOWSCR variable -- sometimes doesn't match sum -- we will take sum for now (only 7 instances)
   )) |>
-  filter(!((PATID == "02201009700118" & COWASMDT == 0 & COASMTM == "02:57") | COASMTM == "")) |>
+  filter(!((PATID == "02201009700118" & COWASMDT == 0 & COASMTM == "02:57") | COASMTM == "")) |> # remove COWS with issues
   select(PATID, COWASMDT, COASMTM, cows_score) |>
   rename("days_from_admission" = "COWASMDT") |>
-  mutate(COASMTM = ymd_hm(paste("2024-01-01", COASMTM)), # choose arbitrary day
+  mutate(COASMTM = ymd_hm(paste("1970-01-01", COASMTM)), # choose arbitrary day
          day_time_cows = COASMTM + days(days_from_admission)) |>
-  select(PATID, day_time_cows, cows_score)
+  select(PATID,days_from_admission, day_time_cows, cows_score)
 
+# SOWS scores
 SOW <- read.csv("data/SBW.csv", colClasses = c(PATID = "character")) |>
   filter(SBASMTM != "") |> # 26 cases of SOWS missing but individual scores present, using sum
   rowwise() |>
@@ -41,7 +43,7 @@ SOW <- read.csv("data/SBW.csv", colClasses = c(PATID = "character")) |>
          SBUSENOW, na.rm = TRUE)) |>
   select(PATID, SBWASMDT, SBASMTM, sows_score) |>
   rename("days_from_admission" = "SBWASMDT") |>
-  mutate(SBASMTM = ymd_hm(paste("2024-01-01", SBASMTM)), # choose arbitrary day
+  mutate(SBASMTM = ymd_hm(paste("1970-01-01", SBASMTM)), # choose arbitrary day
          day_time_sows = SBASMTM + days(days_from_admission)) |>
   select(PATID, day_time_sows, sows_score)
 
@@ -52,8 +54,11 @@ joined_df <- COW |>
     time_diff_hours = abs(as.numeric(difftime(day_time_cows, day_time_sows, units = "hours")))
   ) |>
   ungroup() |>
-  filter(time_diff_hours <= 12) # only those within a half day
+  filter(time_diff_hours <= 12) |> # only those within a half day
+  mutate(cows_first = ifelse(day_time_cows < day_time_sows, 1, 0)) |>
+  distinct()
 
+# finding number of COWS and SOWS mathced by patient within x minutes/hours
 # exact time
 joined_df |> filter(time_diff_hours == 0) |> nrow() #51
 
@@ -70,26 +75,40 @@ joined_df |> filter(time_diff_hours <= 3/60) |> nrow() #141
 joined_df |> filter(time_diff_hours <= 5/60) |> nrow() #191
 
 # less than or equal to 10 minutes
-joined_df |> filter(time_diff_hours <= 10/60) |> nrow() #244
+joined_df |> filter(time_diff_hours <= 10/60) |> nrow() #243
 
 # less than or equal to 15 minutes
-joined_df |> filter(time_diff_hours <= 15/60) |> nrow() #269
+joined_df |> filter(time_diff_hours <= 15/60) |> nrow() #268
 
 # less than or equal to 30 minutes
-joined_df |> filter(time_diff_hours <= 30/60) |> nrow() #320
+joined_df |> filter(time_diff_hours <= 30/60) |> nrow() #319
 
 # less than or equal to 1 hour
-joined_df |> filter(time_diff_hours <= 1) |> nrow() #401
+joined_df |> filter(time_diff_hours <= 1) |> nrow() #400
 
 # less than or equal to 2 hour
-joined_df |> filter(time_diff_hours <= 2) |> nrow() #526
+joined_df |> filter(time_diff_hours <= 2) |> nrow() #525
 
 # less than or equal to 3 hour
-joined_df |> filter(time_diff_hours <= 3) |> nrow() #658
+joined_df |> filter(time_diff_hours <= 3) |> nrow() #657
 
+# try keeping within 15 minutes
+joined_df_15 <- joined_df |>
+  filter(time_diff_hours <= 15/60) # only within 15 minutes
 
+hist(joined_df_15$cows_score)
+hist(joined_df_15$sows_score)
 
+plot(joined_df_15$sows_score, 
+     joined_df_15$cows_score, 
+     main = "Scatterplot of SOWS v. COWS",
+     xlab = "SOWS", 
+     ylab = "COWS",
+     pch = 19,      
+     col = "black")   
 
+# looks like linear fit is appropriate
 
+saveRDS(joined_df, here::here("data/cows_sows_data/joined_df.rds"))
 
 

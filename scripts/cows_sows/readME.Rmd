@@ -1,0 +1,52 @@
+---
+title: "COWS and SOWS"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+# Set global options
+knitr::opts_chunk$set(
+  echo = FALSE,    
+  message = FALSE, 
+  warning = FALSE,
+  fig.width = 6,  
+  fig.height = 4,  
+  dpi = 300        
+)
+library(tidyverse)
+library(knitr)
+```
+
+
+## Descriptive Plots
+- Keeping SOWS and COWS that are within 15 minutes of each other (n = 268 within 15 minutes, n = 51 at the same time)
+
+```{r}
+cows_sows_data <- readRDS(here::here("data/cows_sows_data/final_dat.rds"))
+
+hist(cows_sows_data$cows_score, main = "Histogram of COWS", xlab = "score", ylab = "")
+hist(cows_sows_data$sows_score, main = "Histogram of SOWS", xlab = "score", ylab = "")
+
+plot(cows_sows_data$sows_score, 
+     cows_sows_data$cows_score, 
+     main = "Scatterplot of SOWS v. COWS",
+     xlab = "SOWS", 
+     ylab = "COWS",
+     pch = 19,      
+     col = "black")   
+
+```
+
+
+## Model
+- LASSO model with COWS as a function of SOWS + baseline covariates (same as primary paper) + medication (total clonidine dose in preceding 24 hours, total clonazepam dose in preceding 24 hours, total benzodiazepine dose on previous day) + other variables (days from admission, days between admission and consent, time between COWS and SOWS scores, indicator for COWS being measured prior to SOWS, etc.)
+  - Interactions between SOWS and each variable
+  - Use 1SE lambda
+  
+```{r}
+readRDS(here::here("data/cows_sows_data/model_coef.rds")) |>
+  as.data.frame() |>
+  rename("Coefficient" = "s1") |>
+  kable()
+```
+
