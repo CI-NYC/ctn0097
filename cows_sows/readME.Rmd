@@ -41,10 +41,20 @@ plot(cows_sows_data$sows_score,
 ## Model
 - LASSO model with COWS as a function of SOWS + baseline covariates (same as primary paper) + medication (total clonidine dose in preceding 24 hours, total clonazepam dose in preceding 24 hours, total benzodiazepine dose on previous day) + other variables (days from admission, days between admission and consent, time between COWS and SOWS scores, indicator for COWS being measured prior to SOWS, etc.)
   - Interactions between SOWS and each variable
-  - Use 1SE lambda
+  
+#### Use 1SE lambda
   
 ```{r}
 readRDS(here::here("data/cows_sows_data/model_coef.rds")) |>
+  as.data.frame() |>
+  rename("Coefficient" = "s1") |>
+  kable()
+```
+
+#### Use min lambda
+  
+```{r}
+readRDS(here::here("data/cows_sows_data/model_coef_min.rds")) |>
   as.data.frame() |>
   rename("Coefficient" = "s1") |>
   kable()

@@ -75,3 +75,18 @@ non_zero
 
 saveRDS(non_zero, here::here("data/cows_sows_data/model_coef.rds"))
 
+set.seed(8)
+cvfit <- cv.glmnet(x = analysis_mat, 
+                   y = data$cows_score, 
+                   alpha = 1,
+                   nfolds = 40)
+
+coefficients <- coef(cvfit, s = "lambda.min") # use 1SE lambda
+
+non_zero <- as.matrix(coefficients)
+non_zero <- non_zero[non_zero != 0, , drop = FALSE]
+
+non_zero
+
+saveRDS(non_zero, here::here("data/cows_sows_data/model_coef_min.rds"))
+
