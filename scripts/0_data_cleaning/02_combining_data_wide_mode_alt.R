@@ -227,6 +227,14 @@ ASU <- read.csv(here::here("data/ASU.csv"), colClasses = c(PATID = "character"),
                                           TRUE ~ 0)) |> # if no lifetime painkiller/heroin use then none
   select(PATID, age_first_opioid_use, injection_opioid_use)
 
+D97 <- read.csv(here::here("data/D97.csv"), colClasses = c(PATID = "character"), na.strings = "") |>
+  select(PATID, D97NPOPI)
+
+SITE <- read.csv(here::here("data/EC0097C.csv"), colClasses = c(PATID = "character", SITE = "character"), na.strings = "") |>
+  select(PATID, SITE) |>
+  merge(read.csv(here::here("data/EC0097D.csv"), colClasses = c(PATID = "character", SITE = "character"), na.strings = "") |>
+          select(PATID, SITE), all = TRUE)
+
 process_column <- function(text) {
   text <- iconv(text, from = "latin1", to = "UTF-8", sub = "byte")
   text <- tolower(text)
@@ -242,10 +250,12 @@ unique_values_vector <- process_column(ASU$AUPNKLSP)
 
 # joining data and imputing missing values
 dat <- dat |>
+  left_join(SITE) |>
   left_join(DEM) |>
   left_join(MHX) |>
   left_join(DSM) |>
   left_join(ASU) |>
+  left_join(D97) |>
   mutate(DESEX = ifelse(DESEX == 2, 1, 0),
          years_since_first_opioid_use = case_when(is.na(age_first_opioid_use) == FALSE ~ age - age_first_opioid_use,
                                                   TRUE ~ as.numeric(NA))) |>
@@ -369,6 +379,8 @@ dat <- dat |>
          years_since_first_opioid_use_missing = ifelse(is.na(years_since_first_opioid_use), 1, 0),
          years_since_first_opioid_use = ifelse(years_since_first_opioid_use_missing == 1, median(years_since_first_opioid_use, na.rm = TRUE), years_since_first_opioid_use),
          injection_opioid_use_missing = ifelse(is.na(injection_opioid_use), 1, 0),
-         injection_opioid_use = ifelse(injection_opioid_use_missing == 1, Mode(injection_opioid_use), injection_opioid_use)) 
+         injection_opioid_use = ifelse(injection_opioid_use_missing == 1, Mode(injection_opioid_use), injection_opioid_use),
+         D97NPOPI_missing = ifelse(is.na(D97NPOPI), 1, 0),
+         D97NPOPI = ifelse(D97NPOPI_missing == 1, Mode(D97NPOPI), D97NPOPI)) 
 
 saveRDS(dat, here::here("data/analysis_data/analysis_data_alt.rds"))

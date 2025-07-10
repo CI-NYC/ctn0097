@@ -3,18 +3,7 @@ library(tidyverse)
 
 # loading data and making into wide format
 
-DMA <- read_csv("data/DMA.csv") |>
-  select(PATID,
-         DMAMDDT,
-         DMOTBZO
-         ) |>
-  filter(!is.na(PATID)) |>
-  filter(!is.na(DMOTBZO)) |>
-  mutate(DMOTBZO = as.numeric(DMOTBZO))
-
 dat_long <- readRDS(here::here("data/analysis_data/max_cows_data_alt.rds")) |>
-  left_join(DMA, by = c("PATID" = "PATID",
-                        "DMAMDDT" = "DMAMDDT")) |>
   mutate(A1 = case_when(day_post_consent == naltrexone_injection_day & pre_injection_clonidine >= 0.1 ~ 1, # if injection day, only look at pre-injection 
                         DMCLDDTL >= 0.1 ~ 1, # looking at all clonidine in a day
                         TRUE ~ 0), # otherwise, did not receive medication
@@ -29,23 +18,14 @@ dat_long <- readRDS(here::here("data/analysis_data/max_cows_data_alt.rds")) |>
   #mutate(both_inelig = rowSums(cbind(both_inelig, L2), na.rm = TRUE)) |>
   mutate(dose_total_clonidine = ifelse(is.na(DMCLDDTL), 0, DMCLDDTL),
          dose_total_clonazepam = ifelse(is.na(DMCZPDTL), 0, DMCZPDTL),
-         # converting to clonazepam units (see p 114 https://www.healthquality.va.gov/guidelines/MH/sud/VA-DoD-SUD-CPG_Final_for-508_v3.pdf)
-         dose_total_benzo = case_when(is.na(DMBZODTL) ~ 0, 
-                                      DMOTBZO == 1 ~ DMBZODTL/10, #diazepam
-                                      DMOTBZO == 2 ~ DMBZODTL/25, #chlordiazepoxide
-                                      DMOTBZO == 3 ~ DMBZODTL/2, #lorazepam
-                                      DMOTBZO == 4 ~ DMBZODTL, #alprazolam
-                                      DMOTBZO == 5 ~ DMBZODTL/15, #tempazepam
-                                      DMOTBZO == 6 ~ DMBZODTL/30, #oxazepam
-                                      DMOTBZO == 99 ~ DMBZODTL #other (alprazolam)
-                                      )) |>
+         dose_total_benzo = ifelse(is.na(DMBZODTL), 0, DMBZODTL)) |>
   filter(day_post_consent <= 14) |>
   mutate_at(vars(starts_with("L")), ~ if_else(is.na(.), 0, .)) |>
   rename("max_cows_ineligible" = "both_inelig") |>
   mutate(end_shift = case_when(naltrexone_injection_day == day_post_consent & is.na(max_cows_time) & pre_injection_clonidine == 0 & pre_injection_clonazepam == 0 & is.na(DMBZODTL) ~ 1, # if no cows/trt on day x, then injection counted as previous day
                                end_induction_day == day_post_consent & day_post_consent != 1 & is.na(max_cows_time) & is.na(DMCLDDTL) & is.na(DMCZPDTL) & is.na(DMBZODTL) ~ 1, # if no cows/trt on day x, then leaving counted as previous day
                                TRUE ~ 0),
-         adj = ifelse(rowSums(cbind(A1, A2, A3), na.rm = TRUE) >= 1, 1, 0)) |>
+         adj = ifelse(rowSums(cbind(A1, A2), na.rm = TRUE) >= 1, 1, 0)) |>
   select(PATID, PROTSEG, naltrexone_injection_day, naltrexone_injection_time, end_induction_day, 
          received_naltrexone_injection, days_from_admission_to_consent, day_post_consent, max_cows, max_cows_time, max_cows_ineligible, ends_with("inelig"), A1, A2, A3, adj, starts_with("dose_total"), L1, L2, end_shift) |>
   group_by(PATID) |>
@@ -57,8 +37,6 @@ dat_long <- readRDS(here::here("data/analysis_data/max_cows_data_alt.rds")) |>
   mutate(max_cows_missing_indicator = ifelse(is.na(max_cows), 1, 0),
          max_cows = ifelse(is.na(max_cows), 0, max_cows), # replacing missing max cows with 0 
          max_cows_ineligible = ifelse(is.na(max_cows_ineligible), 0, max_cows_ineligible)) # replacing missing max cows eligible with 0
-
-saveRDS(dat_long, "data/analysis_data/dat_long_alt_shift.rds")
 
 dat <- dat_long |>
   pivot_wider(names_from = day_post_consent, values_from = c(max_cows, max_cows_time, max_cows_missing_indicator, max_cows_ineligible, ends_with("inelig"), A1, A2, A3, L1, L2, adj, starts_with("dose_total"))) |>
@@ -248,14 +226,6 @@ ASU <- read.csv(here::here("data/ASU.csv"), colClasses = c(PATID = "character"),
                                           TRUE ~ 0)) |> # if no lifetime painkiller/heroin use then none
   select(PATID, age_first_opioid_use, injection_opioid_use)
 
-D97 <- read.csv(here::here("data/D97.csv"), colClasses = c(PATID = "character"), na.strings = "") |>
-  select(PATID, D97NPOPI)
-
-SITE <- read.csv(here::here("data/EC0097C.csv"), colClasses = c(PATID = "character", SITE = "character"), na.strings = "") |>
-  select(PATID, SITE) |>
-  merge(read.csv(here::here("data/EC0097D.csv"), colClasses = c(PATID = "character", SITE = "character"), na.strings = "") |>
-          select(PATID, SITE), all = TRUE)
-
 process_column <- function(text) {
   text <- iconv(text, from = "latin1", to = "UTF-8", sub = "byte")
   text <- tolower(text)
@@ -263,6 +233,14 @@ process_column <- function(text) {
   unique_values <- unique(split_values)
   return(unique_values)
 }
+
+D97 <- read.csv(here::here("data/D97.csv"), colClasses = c(PATID = "character"), na.strings = "") |>
+  select(PATID, D97NPOPI)
+
+SITE <- read.csv(here::here("data/EC0097C.csv"), colClasses = c(PATID = "character", SITE = "character"), na.strings = "") |>
+  select(PATID, SITE) |>
+  merge(read.csv(here::here("data/EC0097D.csv"), colClasses = c(PATID = "character", SITE = "character"), na.strings = "") |>
+          select(PATID, SITE), all = TRUE)
 
 # finding all types of pain killers
 unique_values_vector <- process_column(ASU$AUPNKLSP)
@@ -373,8 +351,6 @@ Mode <- function(x, na.rm = TRUE) {
   return(ux[which.max(tabulate(match(x, ux)))])
 }
 
-saveRDS(dat, here::here("data/analysis_data/pre_imputed_analysis_data_alt_shift.rds"))
-
 dat <- dat |>  
   mutate(DEBLACK = ifelse(is.na(DEBLACK), Mode(DEBLACK), DEBLACK),
          DEWHITE = ifelse(is.na(DEWHITE), Mode(DEWHITE), DEWHITE),
@@ -402,7 +378,6 @@ dat <- dat |>
          injection_opioid_use_missing = ifelse(is.na(injection_opioid_use), 1, 0),
          injection_opioid_use = ifelse(injection_opioid_use_missing == 1, Mode(injection_opioid_use), injection_opioid_use),
          D97NPOPI_missing = ifelse(is.na(D97NPOPI), 1, 0),
-         D97NPOPI = ifelse(D97NPOPI_missing == 1, Mode(D97NPOPI), D97NPOPI)
-         ) 
+         D97NPOPI = ifelse(D97NPOPI_missing == 1, Mode(D97NPOPI), D97NPOPI)) 
 
-saveRDS(dat, here::here("data/analysis_data/analysis_data_alt_shift.rds"))
+saveRDS(dat, here::here("data/analysis_data/analysis_data_alt_shift_no_benzo.rds"))

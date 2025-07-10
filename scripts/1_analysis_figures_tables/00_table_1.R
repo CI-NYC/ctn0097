@@ -33,7 +33,8 @@ W <- c("days_from_admission_to_consent",
        "years_since_first_opioid_use",
        "anxiety", #missing
        "bipolar", #missing,
-       "depression"#, #missing
+       "depression", #missing
+       "D97NPOPI"
        )
 
 A <- list(c("adj_1"),
