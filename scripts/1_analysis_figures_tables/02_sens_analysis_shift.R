@@ -46,7 +46,8 @@ W <- c("days_from_admission_to_consent",
        #"bipolar_missing",
        "depression", #missing
        #"depression_missing"
-       "D97NPOPI"
+       "D97NPOPI",
+       "D97NPOPI_missing"
 )
 
 A <- list(c("adj_1"),
@@ -185,7 +186,7 @@ for (i in 5:14)
                               folds = 20
   )
 
-  saveRDS(results_shift_5, here::here(paste0("results_final_shift/results_shift_5_day_", i, ".rds")))
+  saveRDS(results_shift_5, here::here(paste0("results_r1_shift/results_shift_5_day_", i, ".rds")))
 
   set.seed(9)
   results_shift_3 <- run_lmtp(data = dat,
@@ -195,7 +196,7 @@ for (i in 5:14)
                               folds = 20
   )
 
-  saveRDS(results_shift_3, here::here(paste0("results_final_shift/results_shift_3_day_", i, ".rds")))
+  saveRDS(results_shift_3, here::here(paste0("results_r1_shift/results_shift_3_day_", i, ".rds")))
   
   set.seed(9)
   results_shift_always <- run_lmtp(data = dat,
@@ -204,5 +205,5 @@ for (i in 5:14)
                                    learners = learners,
                                    folds = 20
   )
-  saveRDS(results_shift_always, here::here(paste0("results_final_shift/results_shift_always_day_", i, ".rds")))
+  saveRDS(results_shift_always, here::here(paste0("results_r1_shift/results_shift_always_day_", i, ".rds")))
 }

@@ -1,6 +1,7 @@
 library(tidyverse)
 library(lmtp)
 library(ggpubr)
+library(Cairo)
 
 tidy.lmtp_survival <- function(x, ...) {
   out <- do.call("rbind", lapply(x, tidy))
@@ -23,7 +24,7 @@ read_results <- function(day, shift, path){
 }
 
 
-for (p in c("results_final", "results_alt", "results_final_shift"
+for (p in c("results_r1", "results_r1_alt", "results_r1_shift", "results_r1_site_exclusion"
             ))
 {
 combined_results_df <- data.frame()
@@ -103,9 +104,9 @@ combined_vals_always_3 <- map_dfr(contrast_always_3, ~ {
 colnames(combined_vals_always_3) <- gsub("\\vals.", "", colnames(combined_vals_always_3))
 
 combined_results_df <- combined_results_df |>
-  mutate(shift = case_when(shift == "always" ~ "d3: always give adjunctive if not clinically contraindicated",
-                           shift == "3" ~ "d2: adjunctive for max COWS >= 3 and if not clinically contraindicated",
-                           shift == "5" ~ "d1: adjunctive for max COWS >= 5 and if not clinically contraindicated"
+  mutate(shift = case_when(shift == "always" ~ "d3: adjunctive given regardless of withdrawal symptoms",
+                           shift == "3" ~ "d2: adjunctive in response to mild withdrawal symptoms or greater",
+                           shift == "5" ~ "d1: adjunctive in response to at mild-moderate withdrawal symptoms or greater"
                            ))
 
 results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = estimate, color = factor(shift), group = factor(shift), shape = factor(shift))) +
@@ -113,7 +114,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
   scale_shape_manual(values = c(15, 17, 1)) +
   scale_color_manual(values = c("coral1", "dodgerblue4", "chartreuse3")) +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.5)) +
-  ylim(0, 0.6) +
+  ylim(0, 0.625) +
   labs(x = "Day", y = "Probability", title = "") +
   guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
   theme_minimal() + 
@@ -159,15 +160,16 @@ final_plot <- ggarrange(results_plot,
 ggsave(filename = here::here(paste0("figures/figure_", p, ".pdf")), 
        final_plot,
        width = 9,
-       height = 9)
+       height = 9,
+       device = cairo_pdf)
 
 combined_results_df <- combined_results_df |>
   arrange(day, shift)
 
 contrast_df <- combined_vals_always_3 |>
-  mutate(shift = "d2: adjunctive for max COWS >= 3 and if not clinically contraindicated") |>
+  mutate(shift = "d2: adjunctive for max COWS \u2265 3 and if not clinically contraindicated") |>
   merge(combined_vals_always_5 |>
-  mutate(shift = "d1: adjunctive for max COWS >= 5 and if not clinically contraindicated"), all = TRUE) 
+  mutate(shift = "d1: adjunctive for max COWS \u2265 5 and if not clinically contraindicated"), all = TRUE) 
 
 saveRDS(combined_results_df, here::here(paste0(p, "/combined_results_df_", p, ".rds")))
 saveRDS(contrast_df, here::here(paste0(p, "/contrast_results_df_", p, ".rds")))

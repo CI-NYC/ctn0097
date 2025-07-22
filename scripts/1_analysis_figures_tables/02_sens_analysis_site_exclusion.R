@@ -47,7 +47,8 @@ W <- c("days_from_admission_to_consent",
        #"bipolar_missing",
        "depression", #missing
        #"depression_missing"
-       "D97NPOPI"
+       "D97NPOPI",
+       "D97NPOPI_missing"
 )
 
 A <- list(c("adj_1"),
@@ -176,7 +177,7 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
 }
 
 set.seed(9)
-for (i in 13:5)
+for (i in 14:5)
 {
   
   # set.seed(9)
@@ -187,7 +188,7 @@ for (i in 13:5)
   #                             folds = 20
   # )
   # 
-  # saveRDS(results_shift_obs, here::here(paste0("results_final_site_exclusion/results_obs_day_", i, ".rds")))
+  # saveRDS(results_shift_obs, here::here(paste0("results_r1_site_exclusion/results_obs_day_", i, ".rds")))
   
   set.seed(9)
   results_shift_5 <- run_lmtp(data = dat,
@@ -197,7 +198,7 @@ for (i in 13:5)
                               folds = 20
   )
 
-  saveRDS(results_shift_5, here::here(paste0("results_final_site_exclusion/results_shift_5_day_", i, ".rds")))
+  saveRDS(results_shift_5, here::here(paste0("results_r1_site_exclusion/results_shift_5_day_", i, ".rds")))
   
   set.seed(9)
   results_shift_3 <- run_lmtp(data = dat,
@@ -207,7 +208,7 @@ for (i in 13:5)
                               folds = 20
   )
 
-  saveRDS(results_shift_3, here::here(paste0("results_final_site_exclusion/results_shift_3_day_", i, ".rds")))
+  saveRDS(results_shift_3, here::here(paste0("results_r1_site_exclusion/results_shift_3_day_", i, ".rds")))
 
   set.seed(9)
   results_shift_always <- run_lmtp(data = dat,
@@ -216,5 +217,5 @@ for (i in 13:5)
                                    learners = learners,
                                    folds = 20
   )
-  saveRDS(results_shift_always, here::here(paste0("results_final_site_exclusion/results_shift_always_day_", i, ".rds")))
+  saveRDS(results_shift_always, here::here(paste0("results_r1_site_exclusion/results_shift_always_day_", i, ".rds")))
 }

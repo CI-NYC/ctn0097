@@ -46,7 +46,8 @@ W <- c("days_from_admission_to_consent",
   #"bipolar_missing",
   "depression", #missing
   #"depression_missing"
-  "D97NPOPI"
+  "D97NPOPI",
+  "D97NPOPI_missing"
 )
 
 A <- list(c("adj_1"),

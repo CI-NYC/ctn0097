@@ -12,41 +12,42 @@ dat <- dat |>
   mutate(across(starts_with("C_"), ~ ifelse(. == 0, 1, ifelse(. == 1, 0, .)))) # alternating to match competing risks format
 
 W <- c("days_from_admission_to_consent",
-  # demographics
-  "DESEX",
-  "age",
-  "is_hispanic",
-  #"is_hispanic_missing",
-  "DEWHITE",
-  "DEBLACK",
-  #"DEAMEIND",
-  #"DEAAPI",
-  "DEOTHER",
-  #"DERACE_missing",
-  #"PROTSEG",
-  # substance use
-  "alcohol_use_disorder", #missing
-  #"alcohol_use_disorder_missing",
-  "amphetamine_use_disorder", #missing
-  #"amphetamine_use_disorder_missing",
-  "cannabis_use_disorder", #missing
-  #"cannabis_use_disorder_missing",
-  "cocaine_use_disorder", #missing
-  #"cocaine_use_disorder_missing",
-  "sedative_use_disorder", #missing
-  #"sedative_use_disorder_missing",
-  "injection_opioid_use",
-  #"injection_opioid_use_missing",
-  "years_since_first_opioid_use",
-  #"years_since_first_opioid_use_missing",
-  # mental health
-  "anxiety", #missing
-  #"anxiety_missing",
-  "bipolar", #missing,
-  #"bipolar_missing",
-  "depression", #missing
-  #"depression_missing"
-  "D97NPOPI"
+       # demographics
+       "DESEX",
+       "age",
+       "is_hispanic",
+       #"is_hispanic_missing",
+       "DEWHITE",
+       "DEBLACK",
+       #"DEAMEIND",
+       #"DEAAPI",
+       "DEOTHER",
+       #"DERACE_missing",
+       #"PROTSEG",
+       # substance use
+       "alcohol_use_disorder", #missing
+       #"alcohol_use_disorder_missing",
+       "amphetamine_use_disorder", #missing
+       #"amphetamine_use_disorder_missing",
+       "cannabis_use_disorder", #missing
+       #"cannabis_use_disorder_missing",
+       "cocaine_use_disorder", #missing
+       #"cocaine_use_disorder_missing",
+       "sedative_use_disorder", #missing
+       #"sedative_use_disorder_missing",
+       "injection_opioid_use",
+       "injection_opioid_use_missing",
+       "years_since_first_opioid_use",
+       "years_since_first_opioid_use_missing",
+       # mental health
+       "anxiety", #missing
+       #"anxiety_missing",
+       "bipolar", #missing,
+       #"bipolar_missing",
+       "depression", #missing
+       #"depression_missing"
+       "D97NPOPI",
+       "D97NPOPI_missing"
 )
 
 A <- list(c("adj_1"),
@@ -110,10 +111,16 @@ learners <- list("mean", "glm",
                  list("xgboost",
                       min_child_weight = 5,
                       id = "xgboost1"),
+                 list("xgboost",
+                      lambda = 5,
+                      id = "xgboost2"),
                  "ranger",
                  list("ranger",
                       num.trees = 1000,
-                    id = "ranger1")
+                      id = "ranger1"),
+                 list("ranger",
+                      num.trees = 1500,
+                      id = "ranger2")
 )
 
 # function for running lmtp
@@ -139,7 +146,7 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
     folds = folds, 
     control = lmtp_control(.learners_outcome_folds = 10,
                            .learners_trt_folds = 10,
-                           .trim = 0.95), # look at trim
+                           .trim = 0.975), # look at trim
     mtp = FALSE,
     id = NULL)
   
@@ -148,7 +155,7 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
 
 set.seed(9)
 
-for (i in 14:5)
+for (i in 11:9)
   {
     
     # set.seed(11)
@@ -159,7 +166,7 @@ for (i in 14:5)
     #                             folds = 20
     # )
     # 
-    # saveRDS(results_shift_obs, here::here(paste0("results_alt/results_obs_day_", i, ".rds")))
+    # saveRDS(results_shift_obs, here::here(paste0("results_r1_alt/results_obs_day_", i, ".rds")))
 
 set.seed(9)
 results_shift_5 <- run_lmtp(data = dat,
@@ -169,7 +176,7 @@ results_shift_5 <- run_lmtp(data = dat,
                             folds = 20
 )
 
-saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i, ".rds")))
+saveRDS(results_shift_5, here::here(paste0("results_r1_alt/results_shift_5_day_", i, ".rds")))
 
     set.seed(9)
     results_shift_3 <- run_lmtp(data = dat,
@@ -179,7 +186,7 @@ saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i
                                 folds = 20
     )
 
-    saveRDS(results_shift_3, here::here(paste0("results_alt/results_shift_3_day_", i, ".rds")))
+    saveRDS(results_shift_3, here::here(paste0("results_r1_alt/results_shift_3_day_", i, ".rds")))
 
     set.seed(9)
     results_shift_always <- run_lmtp(data = dat,
@@ -188,5 +195,5 @@ saveRDS(results_shift_5, here::here(paste0("results_alt/results_shift_5_day_", i
                                 learners = learners,
                                 folds = 20
     )
-    saveRDS(results_shift_always, here::here(paste0("results_alt/results_shift_always_day_", i, ".rds")))
+    saveRDS(results_shift_always, here::here(paste0("results_r1_alt/results_shift_always_day_", i, ".rds")))
 }
