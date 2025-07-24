@@ -9,7 +9,7 @@ density_df <- data.frame(analysis = character(),
                  day_4 = numeric(),
                  day_5 = numeric())
 
-for (a in c("results_final", "results_alt", "results_final_shift"))
+for (a in c("results_r1", "results_r1_alt", "results_r1_shift", "results_r1_site_exclusion"))
 {
 for (i in c("always", "5", "3"))
 {
@@ -37,7 +37,7 @@ density_df <- rbind(density_df, density_row)
 }
 
 density_df <- density_df |>
-  mutate(analysis = factor(analysis, levels = c("results_final", "results_alt", "results_final_shift")),
+  mutate(analysis = factor(analysis, levels = c("results_r1", "results_r1_alt", "results_r1_shift", "results_r1_site_exclusion")),
          shift = factor(shift, levels = c("5", "3", "always")),
          ) |>
   arrange(analysis, shift)

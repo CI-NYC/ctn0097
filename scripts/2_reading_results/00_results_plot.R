@@ -24,7 +24,7 @@ read_results <- function(day, shift, path){
 }
 
 
-for (p in c("results_r1", "results_r1_alt", "results_r1_shift", "results_r1_site_exclusion"
+for (p in c("results_r1", "results_r1_alt", "results_r1_shift"
             ))
 {
 combined_results_df <- data.frame()
@@ -119,7 +119,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
   guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
   theme_minimal() + 
   theme(
-    legend.position =  c(0.75, 0.15),
+    legend.position =  c(0.7, 0.15),
     legend.key.height = unit(0.5, "lines"),
     legend.key.width = unit(0.5, "lines"),
     legend.background = element_rect(fill = "white", color = "black", size = 0.25), 
@@ -167,9 +167,9 @@ combined_results_df <- combined_results_df |>
   arrange(day, shift)
 
 contrast_df <- combined_vals_always_3 |>
-  mutate(shift = "d2: adjunctive for max COWS \u2265 3 and if not clinically contraindicated") |>
+  mutate(shift = "d2: adjunctive in response to mild withdrawal symptoms or greater") |>
   merge(combined_vals_always_5 |>
-  mutate(shift = "d1: adjunctive for max COWS \u2265 5 and if not clinically contraindicated"), all = TRUE) 
+  mutate(shift = "d1: adjunctive in response to at mild-moderate withdrawal symptoms or greater"), all = TRUE) 
 
 saveRDS(combined_results_df, here::here(paste0(p, "/combined_results_df_", p, ".rds")))
 saveRDS(contrast_df, here::here(paste0(p, "/contrast_results_df_", p, ".rds")))

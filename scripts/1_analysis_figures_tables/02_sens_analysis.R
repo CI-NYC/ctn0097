@@ -155,7 +155,7 @@ run_lmtp <-  function(data, day = 5, shift = NULL, learners = learners, folds = 
 
 set.seed(9)
 
-for (i in 11:9)
+for (i in 14:5)
   {
     
     # set.seed(11)
