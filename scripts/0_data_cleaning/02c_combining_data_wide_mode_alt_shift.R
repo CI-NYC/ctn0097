@@ -388,9 +388,9 @@ dat <- dat |>
          cannabis_use_disorder_missing = ifelse(is.na(cannabis_use_disorder), 1, 0),
          cannabis_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(cannabis_use_disorder), cannabis_use_disorder),
          cocaine_use_disorder_missing = ifelse(is.na(cocaine_use_disorder), 1, 0),
-         cocaine_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(cocaine_use_disorder), cocaine_use_disorder),
+         cocaine_use_disorder = ifelse(cocaine_use_disorder == 1, Mode(cocaine_use_disorder), cocaine_use_disorder),
          sedative_use_disorder_missing = ifelse(is.na(sedative_use_disorder), 1, 0),
-         sedative_use_disorder = ifelse(cannabis_use_disorder_missing == 1, Mode(sedative_use_disorder), sedative_use_disorder),
+         sedative_use_disorder = ifelse(sedative_use_disorder == 1, Mode(sedative_use_disorder), sedative_use_disorder),
          anxiety_missing = ifelse(is.na(anxiety), 1, 0),
          anxiety = ifelse(anxiety_missing == 1, Mode(anxiety), anxiety),
          bipolar_missing = ifelse(is.na(bipolar), 1, 0),
@@ -402,7 +402,7 @@ dat <- dat |>
          injection_opioid_use_missing = ifelse(is.na(injection_opioid_use), 1, 0),
          injection_opioid_use = ifelse(injection_opioid_use_missing == 1, Mode(injection_opioid_use), injection_opioid_use),
          D97NPOPI_missing = ifelse(is.na(D97NPOPI), 1, 0),
-         D97NPOPI = ifelse(D97NPOPI_missing == 1, Mode(D97NPOPI), D97NPOPI)
+         D97NPOPI = ifelse(D97NPOPI_missing == 1, Mode(D97NPOPI), D97NPOPI))
          ) 
 
 saveRDS(dat, here::here("data/analysis_data/analysis_data_alt_shift.rds"))
