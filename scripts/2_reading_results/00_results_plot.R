@@ -104,9 +104,9 @@ combined_vals_always_3 <- map_dfr(contrast_always_3, ~ {
 colnames(combined_vals_always_3) <- gsub("\\vals.", "", colnames(combined_vals_always_3))
 
 combined_results_df <- combined_results_df |>
-  mutate(shift = case_when(shift == "always" ~ "d3: adjunctive given regardless of withdrawal symptoms",
-                           shift == "3" ~ "d2: adjunctive in response to mild withdrawal symptoms or greater",
-                           shift == "5" ~ "d1: adjunctive in response to at mild-moderate withdrawal symptoms or greater"
+  mutate(shift = case_when(shift == "always" ~ "No threshold: adjunctive given regardless of withdrawal symptoms",
+                           shift == "3" ~ "Minimal threshold: adjunctive in response to mild withdrawal symptoms or greater",
+                           shift == "5" ~ "Mild-to-moderate threshold: adjunctive in response to mild-to-moderate withdrawal symptoms or greater"
                            ))
 
 results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = estimate, color = factor(shift), group = factor(shift), shape = factor(shift))) +
@@ -119,7 +119,7 @@ results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = esti
   guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
   theme_minimal() + 
   theme(
-    legend.position =  c(0.7, 0.15),
+    legend.position =  c(0.625, 0.15),
     legend.key.height = unit(0.5, "lines"),
     legend.key.width = unit(0.5, "lines"),
     legend.background = element_rect(fill = "white", color = "black", size = 0.25), 
@@ -131,7 +131,7 @@ contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(d
   geom_point(position = position_dodge(width = 0.2), color = "black") + 
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "black") + 
   ylim(-0.1, 0.35) + 
-  labs(x = "Day", y = "Difference", title = "d3 vs. d1") +
+  labs(x = "Day", y = "Difference", title = "No threshold vs. mild-to-moderate threshold") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_minimal() +
   theme(legend.position = "none")
@@ -140,7 +140,7 @@ contrast_plot_always_3 <- ggplot(data = combined_vals_always_3, aes(x = factor(d
   geom_point(position = position_dodge(width = 0.2), color = "black") + 
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "black") + 
   ylim(-0.1, 0.35) + 
-  labs(x = "Day", y = "Difference", title = "d3 vs. d2") +
+  labs(x = "Day", y = "Difference", title = "No threshold vs. minimal threshold") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   theme_minimal() +
   theme(legend.position = "none")
@@ -167,9 +167,9 @@ combined_results_df <- combined_results_df |>
   arrange(day, shift)
 
 contrast_df <- combined_vals_always_3 |>
-  mutate(shift = "d2: adjunctive in response to mild withdrawal symptoms or greater") |>
+  mutate(shift = "Minimal threshold: adjunctive in response to mild withdrawal symptoms or greater") |>
   merge(combined_vals_always_5 |>
-  mutate(shift = "d1: adjunctive in response to at mild-moderate withdrawal symptoms or greater"), all = TRUE) 
+  mutate(shift = "Mild-to-moderate threshold: adjunctive in response to mild-to-moderate withdrawal symptoms or greater"), all = TRUE) 
 
 saveRDS(combined_results_df, here::here(paste0(p, "/combined_results_df_", p, ".rds")))
 saveRDS(contrast_df, here::here(paste0(p, "/contrast_results_df_", p, ".rds")))

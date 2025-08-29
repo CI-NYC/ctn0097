@@ -103,74 +103,77 @@ for (p in c("results_r1_site_exclusion"
   
   colnames(combined_vals_always_3) <- gsub("\\vals.", "", colnames(combined_vals_always_3))
   
-  combined_results_df <- combined_results_df |>
-    mutate(shift = case_when(shift == "always" ~ "d3: adjunctive given regardless of withdrawal symptoms",
-                             shift == "3" ~ "d2: adjunctive in response to mild withdrawal symptoms or greater",
-                             shift == "5" ~ "d1: adjunctive in response to at mild-moderate withdrawal symptoms or greater"
-    ))
-  
-  results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = estimate, color = factor(shift), group = factor(shift), shape = factor(shift))) +
-    geom_point(position = position_dodge(width = 0.5)) + 
-    scale_shape_manual(values = c(15, 17, 1)) +
-    scale_color_manual(values = c("coral1", "dodgerblue4", "chartreuse3")) +
-    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.5)) +
-    ylim(0, 0.8) +
-    labs(x = "Day", y = "Probability", title = "") +
-    guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
-    theme_minimal() + 
-    theme(
-      legend.position =  c(0.7, 0.15),
-      legend.key.height = unit(0.5, "lines"),
-      legend.key.width = unit(0.5, "lines"),
-      legend.background = element_rect(fill = "white", color = "black", size = 0.25), 
-      legend.title = element_text(face = "bold"),
-      plot.title = element_text(hjust = 0.5)
-    )
-  
-  contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(day), y = estimate)) +
-    geom_point(position = position_dodge(width = 0.2), color = "black") + 
-    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "black") + 
-    ylim(-0.2, 0.3) + 
-    labs(x = "Day", y = "Difference", title = "d3 vs. d1") +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  contrast_plot_always_3 <- ggplot(data = combined_vals_always_3, aes(x = factor(day), y = estimate)) +
-    geom_point(position = position_dodge(width = 0.2), color = "black") + 
-    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "black") + 
-    ylim(-0.2, 0.3) + 
-    labs(x = "Day", y = "Difference", title = "d3 vs. d2") +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  results_plot <- ggarrange(results_plot, ncol = 1)
-  
-  results_plot <- annotate_figure(results_plot, top = text_grob("Cumulative XR-NTX Initiation Probability by Day", size = 14))
-  
-  contrast_plots <- ggarrange(contrast_plot_always_5, contrast_plot_always_3, ncol = 2)
-  
-  contrast_plots <- annotate_figure(contrast_plots, top = text_grob("Difference in Probability of XR-NTX Initiation by Day", size = 14))
-  
-  final_plot <- ggarrange(results_plot, 
-                          contrast_plots,
-                          nrow = 2)
-  
-  ggsave(filename = here::here(paste0("figures/figure_", p, ".pdf")), 
-         final_plot,
-         width = 9,
-         height = 9,
-         device = cairo_pdf)
-  
-  combined_results_df <- combined_results_df |>
-    arrange(day, shift)
-  
-  contrast_df <- combined_vals_always_3 |>
-    mutate(shift = "d2: adjunctive in response to mild withdrawal symptoms or greater") |>
-    merge(combined_vals_always_5 |>
-            mutate(shift = "d1: adjunctive in response to at mild-moderate withdrawal symptoms or greater"), all = TRUE) 
-  
-  saveRDS(combined_results_df, here::here(paste0(p, "/combined_results_df_", p, ".rds")))
-  saveRDS(contrast_df, here::here(paste0(p, "/contrast_results_df_", p, ".rds")))
+combined_results_df <- combined_results_df |>
+  mutate(shift = case_when(shift == "always" ~ "No threshold: adjunctive given regardless of withdrawal symptoms",
+                           shift == "3" ~ "Minimal threshold: adjunctive in response to mild withdrawal symptoms or greater",
+                           shift == "5" ~ "Mild-to-moderate threshold: adjunctive in response to mild-to-moderate withdrawal symptoms or greater"
+                           ))
+
+results_plot <- ggplot(data = combined_results_df, aes(x = factor(day), y = estimate, color = factor(shift), group = factor(shift), shape = factor(shift))) +
+  geom_point(position = position_dodge(width = 0.5)) + 
+  scale_shape_manual(values = c(15, 17, 1)) +
+  scale_color_manual(values = c("coral1", "dodgerblue4", "chartreuse3")) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.5)) +
+  ylim(0, 0.8) +
+  labs(x = "Day", y = "Probability", title = "") +
+  guides(color = guide_legend("Dynamic Treatment Regime"), shape = guide_legend("Dynamic Treatment Regime")) +
+  theme_minimal() + 
+  theme(
+    legend.position =  c(0.625, 0.15),
+    legend.key.height = unit(0.5, "lines"),
+    legend.key.width = unit(0.5, "lines"),
+    legend.background = element_rect(fill = "white", color = "black", size = 0.25), 
+    legend.title = element_text(face = "bold"),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+contrast_plot_always_5 <- ggplot(data = combined_vals_always_5, aes(x = factor(day), y = estimate)) +
+  geom_point(position = position_dodge(width = 0.2), color = "black") + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "black") + 
+  ylim(-0.15, 0.35) + 
+  labs(x = "Day", y = "Difference", title = "No threshold vs. mild-to-moderate threshold") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+contrast_plot_always_3 <- ggplot(data = combined_vals_always_3, aes(x = factor(day), y = estimate)) +
+  geom_point(position = position_dodge(width = 0.2), color = "black") + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, position = position_dodge(width = 0.2), color = "black") + 
+  ylim(-0.15, 0.35) + 
+  labs(x = "Day", y = "Difference", title = "No threshold vs. minimal threshold") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+results_plot <- ggarrange(results_plot, ncol = 1)
+
+results_plot <- annotate_figure(results_plot, top = text_grob("Cumulative XR-NTX Initiation Probability by Day", size = 14))
+
+contrast_plots <- ggarrange(contrast_plot_always_5, contrast_plot_always_3, ncol = 2)
+
+contrast_plots <- annotate_figure(contrast_plots, top = text_grob("Difference in Probability of XR-NTX Initiation by Day", size = 14))
+
+final_plot <- ggarrange(results_plot, 
+                        contrast_plots,
+                        nrow = 2)
+
+ggsave(filename = here::here(paste0("figures/figure_", p, ".pdf")), 
+       final_plot,
+       width = 9,
+       height = 9,
+       device = cairo_pdf)
+
+combined_results_df <- combined_results_df |>
+  arrange(day, shift)
+
+contrast_df <- combined_vals_always_3 |>
+  mutate(shift = "Minimal threshold: adjunctive in response to mild withdrawal symptoms or greater") |>
+  merge(combined_vals_always_5 |>
+  mutate(shift = "Mild-to-moderate threshold: adjunctive in response to mild-to-moderate withdrawal symptoms or greater"), all = TRUE) 
+
+saveRDS(combined_results_df, here::here(paste0(p, "/combined_results_df_", p, ".rds")))
+saveRDS(contrast_df, here::here(paste0(p, "/contrast_results_df_", p, ".rds")))
 }
+
+
+
